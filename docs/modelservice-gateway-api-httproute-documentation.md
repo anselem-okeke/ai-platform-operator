@@ -167,7 +167,7 @@ Registration:
 ```go
 utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 utilruntime.Must(platformv1alpha1.AddToScheme(scheme))
-utilruntime.Must(gatewayv1.AddToScheme(scheme))
+utilruntime.Must(gatewayv1.Install(scheme))
 ```
 
 This allows the running controller manager to create, read, update, watch, and delete Gateway API objects through the controller-runtime client.
@@ -194,7 +194,7 @@ Registration:
 err = platformv1alpha1.AddToScheme(scheme.Scheme)
 Expect(err).NotTo(HaveOccurred())
 
-err = gatewayv1.AddToScheme(scheme.Scheme)
+err = gatewayv1.Install(scheme.Scheme)
 Expect(err).NotTo(HaveOccurred())
 ```
 
@@ -1264,7 +1264,7 @@ This is typically an IDE deprecation indication, not a compilation failure.
 The following registration was validated successfully:
 
 ```go
-gatewayv1.AddToScheme(scheme.Scheme)
+gatewayv1.Install(scheme.Scheme)
 ```
 
 ### Nil pointer during test-suite startup
@@ -1272,7 +1272,7 @@ gatewayv1.AddToScheme(scheme.Scheme)
 Incorrect:
 
 ```go
-gatewayv1.AddToScheme(k8sClient.Scheme())
+gatewayv1.Install(k8sClient.Scheme())
 ```
 
 when `k8sClient` has not yet been initialized.
@@ -1280,7 +1280,7 @@ when `k8sClient` has not yet been initialized.
 Correct:
 
 ```go
-gatewayv1.AddToScheme(scheme.Scheme)
+gatewayv1.Install(scheme.Scheme)
 ```
 
 ### `no matches for kind "HTTPRoute"`

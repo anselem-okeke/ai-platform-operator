@@ -41,9 +41,11 @@ import (
 )
 
 const (
-	modelContainerName = "model"
-	httpPortName       = "http"
-	modelStorageName   = "model-storage"
+	modelContainerName        = "model"
+	httpPortName              = "http"
+	modelStorageName          = "model-storage"
+	gatewayDataPlaneNamespace = "envoy-gateway-system"
+	namespaceNameLabel        = "kubernetes.io/metadata.name"
 
 	runtimeTmpVolumeName = "runtime-tmp"
 	runtimeTmpMountPath  = "/tmp"
@@ -191,7 +193,7 @@ func (r *ModelServiceReconciler) Reconcile(
 				MatchLabels: labels,
 			}
 
-			deployment.Spec.Template.ObjectMeta.Labels = labels
+			deployment.Spec.Template.Labels = labels
 
 			health := healthForModelService(modelService)
 			security := securityForModelService(modelService)
@@ -971,7 +973,7 @@ func (r *ModelServiceReconciler) reconcileHTTPRoute(
 		gatewayv1.Kind("Service")
 
 	servicePort :=
-		gatewayv1.PortNumber(modelService.Spec.Port)
+		modelService.Spec.Port
 
 	route := &gatewayv1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
@@ -1081,7 +1083,7 @@ func networkPolicyIngressRules(
 			networkingv1.NetworkPolicyPeer{
 				NamespaceSelector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
-						"kubernetes.io/metadata.name": exposure.
+						namespaceNameLabel: exposure.
 							GatewayDataPlaneNamespace,
 					},
 				},
@@ -1125,7 +1127,7 @@ func networkPolicyEgressRules(
 				{
 					NamespaceSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
-							"kubernetes.io/metadata.name": "kube-system",
+							namespaceNameLabel: "kube-system",
 						},
 					},
 
@@ -1568,7 +1570,7 @@ func exposureForModelService(
 		GatewayName:               "shared-gateway",
 		GatewayNamespace:          "gateway-system",
 		GatewaySectionName:        "http",
-		GatewayDataPlaneNamespace: "envoy-gateway-system",
+		GatewayDataPlaneNamespace: gatewayDataPlaneNamespace,
 	}
 
 	if modelService.Spec.Exposure == nil {
