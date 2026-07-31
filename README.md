@@ -363,3 +363,7 @@ If you'd like to fix a bug, contribute a feature or just correct a typo, please 
 1. Profit
 
 Note that if you didn't sign the CLA before opening your PR, you can re-run the check by adding a comment to the PR that says "I've signed the CLA!"!
+
+## License
+
+This project is licensed under the Apache License 2.0. See the [LICENSE](LICENSE) file for details.
