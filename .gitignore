@@ -47,6 +47,13 @@ kubeconfig.*
 *.crt
 *.p12
 
+# Downloaded tools and archives
+kubeaudit
+kubeaudit_*.tar.gz
+
+# Generated security reports
+kubeaudit-report.json
+
 # Generated local test artifacts
 testbin/
 tmp/
