@@ -1,0 +1,52 @@
+# Build outputs
+bin/
+dist/
+build/
+out/
+
+# Go test and coverage files
+cover.out
+coverage.out
+*.coverprofile
+*.test
+
+# Go workspace
+go.work
+go.work.sum
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# IDE files
+.vscode/
+.idea/
+*.iml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+*.swp
+*.swo
+*~
+
+# Local Kubernetes configuration
+kubeconfig
+kubeconfig.*
+*.kubeconfig
+
+# Local certificates and keys
+*.key
+*.pem
+*.crt
+*.p12
+
+# Generated local test artifacts
+testbin/
+tmp/
