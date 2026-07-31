@@ -1,0 +1,29 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+
+networking:
+  disableDefaultCNI: true
+  podSubnet: "192.168.0.0/16"
+  serviceSubnet: "10.96.0.0/16"
+  apiServerAddress: "0.0.0.0"
+  apiServerPort: 6444
+
+kubeadmConfigPatches:
+  - |
+    kind: ClusterConfiguration
+    apiServer:
+      certSANs:
+        - "host.docker.internal"
+        - "172.17.0.1"
+        - "127.0.0.1"
+
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 30001
+        hostPort: 30002
+        protocol: TCP
+
+  - role: worker
+
+  - role: worker
