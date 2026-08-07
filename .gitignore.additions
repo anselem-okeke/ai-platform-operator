@@ -1,0 +1,2 @@
+infrastructure/vault/variables.env
+.local/vault-auth/

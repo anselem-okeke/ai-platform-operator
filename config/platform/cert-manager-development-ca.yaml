@@ -1,0 +1,43 @@
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: development-selfsigned-bootstrap
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: development-root-ca
+  namespace: gateway-system
+spec:
+  isCA: true
+  commonName: AI Platform Development Root CA
+
+  subject:
+    organizations:
+      - AI Platform Development
+
+  secretName: development-root-ca
+
+  duration: 87600h
+  renewBefore: 8760h
+
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+
+  issuerRef:
+    name: development-selfsigned-bootstrap
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: development-ca
+  namespace: gateway-system
+spec:
+  ca:
+    secretName: development-root-ca
