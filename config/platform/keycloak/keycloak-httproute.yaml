@@ -1,0 +1,32 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: keycloak
+  namespace: keycloak
+  labels:
+    app.kubernetes.io/name: keycloak
+    app.kubernetes.io/component: external-route
+    app.kubernetes.io/part-of: ai-platform
+spec:
+  hostnames:
+    - auth.ai-platform.local
+
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: shared-gateway
+      namespace: gateway-system
+      sectionName: keycloak-https
+
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: keycloak
+          port: 8080
+          weight: 1

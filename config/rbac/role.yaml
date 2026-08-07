@@ -77,8 +77,6 @@ rules:
   resources:
   - modelservices
   verbs:
-  - create
-  - delete
   - get
   - list
   - patch

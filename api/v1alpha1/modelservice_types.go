@@ -66,6 +66,16 @@ type ModelServiceSecurity struct {
 	// or PersistentVolumeClaim volumes.
 	// +kubebuilder:default=true
 	ReadOnlyRootFilesystem bool `json:"readOnlyRootFilesystem,omitempty"`
+
+	// AutomountServiceAccountToken controls whether Kubernetes API credentials
+	// are automatically mounted into the workload Pod.
+	//
+	// Model-serving workloads should normally not require direct Kubernetes
+	// API access.
+	//
+	// +kubebuilder:default=false
+	// +optional
+	AutomountServiceAccountToken *bool `json:"automountServiceAccountToken,omitempty"`
 }
 
 // ModelServiceHealth defines HTTP health check configuration.

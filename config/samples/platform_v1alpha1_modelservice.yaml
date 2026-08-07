@@ -38,7 +38,7 @@ spec:
     pathPrefix: /
     gatewayName: shared-gateway
     gatewayNamespace: gateway-system
-    gatewaySectionName: http
+    gatewaySectionName: fraud-model-https
     gatewayDataPlaneNamespace: envoy-gateway-system
 
   resources:
@@ -48,13 +48,14 @@ spec:
     limits:
       cpu: 500m
       memory: 512Mi
-
+      
   security:
     runAsNonRoot: true
     runAsUser: 101
     runAsGroup: 101
     fsGroup: 101
     readOnlyRootFilesystem: true
+    automountServiceAccountToken: false
 
   storage:
     enabled: true

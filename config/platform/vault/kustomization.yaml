@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- vault-token-reviewer.yaml
+- cert-manager-vault-serviceaccount.yaml
+- cert-manager-vault-token-rbac.yaml
+- vault-issuer.yaml
+- vault-token-reviewer-secret.yaml
+secretGenerator:
+- name: vault-server-ca
+  namespace: gateway-system
+  files:
+  - ca.crt=files/vault-server-ca.crt
+generatorOptions:
+  disableNameSuffixHash: true

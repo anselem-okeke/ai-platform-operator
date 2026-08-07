@@ -1,0 +1,30 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: fraud-model-local
+  namespace: gateway-system
+spec:
+  secretName: fraud-model-local-tls
+
+  commonName: fraud-model.local
+
+  dnsNames:
+    - fraud-model.local
+
+  duration: 720h
+  renewBefore: 168h
+
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+
+  usages:
+    - digital signature
+    - key encipherment
+    - server auth
+
+  issuerRef:
+    name: development-ca
+    kind: Issuer
+    group: cert-manager.io

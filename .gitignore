@@ -46,6 +46,7 @@ kubeconfig.*
 *.pem
 *.crt
 *.p12
+*.pyc
 
 # Downloaded tools and archives
 kubeaudit
@@ -57,3 +58,20 @@ kubeaudit-report.json
 # Generated local test artifacts
 testbin/
 tmp/
+venv/
+
+kind-calico-config.yaml.backup
+
+config/platform/keycloak/.secrets/
+.local/keycloak/
+*.before-keycloak
+
+# Local credentials and generated runtime files
+.local/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Generated archives
+*.zip

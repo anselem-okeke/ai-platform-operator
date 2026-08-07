@@ -1,0 +1,27 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: vault-keycloak-issuer
+  namespace: gateway-system
+  labels:
+    app.kubernetes.io/name: vault-keycloak-issuer
+    app.kubernetes.io/component: certificate-issuer
+    app.kubernetes.io/part-of: ai-platform
+spec:
+  vault:
+    server: https://vault.platform.local:8200
+    path: pki_modelservice/sign/keycloak
+
+    caBundleSecretRef:
+      name: vault-server-ca
+      key: ca.crt
+
+    auth:
+      kubernetes:
+        mountPath: /v1/auth/kubernetes-kind
+        role: cert-manager-keycloak
+
+        serviceAccountRef:
+          name: cert-manager-keycloak-issuer
+          audiences:
+            - https://kubernetes.default.svc.cluster.local

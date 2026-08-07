@@ -77,7 +77,7 @@ type ModelServiceReconciler struct {
 
 // Permissions for ModelService resources.
 //
-// +kubebuilder:rbac:groups=platform.anselem.dev,resources=modelservices,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=platform.anselem.dev,resources=modelservices,verbs=get;list;watch;update;patch
 // +kubebuilder:rbac:groups=platform.anselem.dev,resources=modelservices/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=platform.anselem.dev,resources=modelservices/finalizers,verbs=update
 //
@@ -298,7 +298,9 @@ func (r *ModelServiceReconciler) Reconcile(
 
 				ServiceAccountName: modelService.Name,
 
-				AutomountServiceAccountToken: boolPointer(false),
+				AutomountServiceAccountToken: boolPointer(
+					resolveAutomountServiceAccountToken(modelService),
+				),
 
 				SecurityContext: podSecurityContext,
 
@@ -502,7 +504,9 @@ func (r *ModelServiceReconciler) reconcileServiceAccount(
 
 			// The workload currently does not need Kubernetes API credentials.
 			serviceAccount.AutomountServiceAccountToken =
-				boolPointer(false)
+				boolPointer(
+					resolveAutomountServiceAccountToken(modelService),
+				)
 
 			return controllerutil.SetControllerReference(
 				modelService,
@@ -526,6 +530,16 @@ func (r *ModelServiceReconciler) reconcileServiceAccount(
 	)
 
 	return nil
+}
+
+func resolveAutomountServiceAccountToken(
+	modelService *platformv1alpha1.ModelService,
+) bool {
+	if modelService.Spec.Security.AutomountServiceAccountToken == nil {
+		return false
+	}
+
+	return *modelService.Spec.Security.AutomountServiceAccountToken
 }
 
 func containerSecurityContextForModelService(

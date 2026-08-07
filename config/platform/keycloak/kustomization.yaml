@@ -1,0 +1,36 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespace.yaml
+  - postgres.yaml
+  - keycloak.yaml
+  - networkpolicy.yaml
+  - keycloak-httproute.yaml
+  - keycloak-http-redirect.yaml
+  - tls/cert-manager-keycloak-serviceaccount.yaml
+  - tls/cert-manager-keycloak-token-rbac.yaml
+  - tls/vault-keycloak-issuer.yaml
+  - tls/keycloak-certificate.yaml
+
+secretGenerator:
+  - name: keycloak-postgres-credentials
+    namespace: keycloak
+    envs:
+      - .secrets/postgres.env
+
+  - name: keycloak-bootstrap-admin
+    namespace: keycloak
+    envs:
+      - .secrets/bootstrap-admin.env
+
+  - name: ai-platform-service-client-credentials
+    namespace: keycloak
+    envs:
+      - .secrets/service-client.env
+
+generatorOptions:
+  disableNameSuffixHash: true
+  labels:
+    app.kubernetes.io/part-of: ai-platform
+    app.kubernetes.io/managed-by: kustomize

@@ -1,0 +1,20 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: vault-issuer
+  namespace: gateway-system
+spec:
+  vault:
+    server: https://vault.platform.local:8200
+    path: pki_modelservice/sign/modelservice
+    caBundleSecretRef:
+      name: vault-server-ca
+      key: ca.crt
+    auth:
+      kubernetes:
+        mountPath: /v1/auth/kubernetes-kind
+        role: cert-manager-modelservice
+        serviceAccountRef:
+          name: cert-manager-vault-issuer
+          audiences:
+          - https://kubernetes.default.svc.cluster.local

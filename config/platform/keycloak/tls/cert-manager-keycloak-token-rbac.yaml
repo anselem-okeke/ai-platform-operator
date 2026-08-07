@@ -1,0 +1,34 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: cert-manager-keycloak-tokenrequest
+  namespace: gateway-system
+  labels:
+    app.kubernetes.io/name: cert-manager-keycloak-tokenrequest
+    app.kubernetes.io/part-of: ai-platform
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - serviceaccounts/token
+    resourceNames:
+      - cert-manager-keycloak-issuer
+    verbs:
+      - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: cert-manager-keycloak-tokenrequest
+  namespace: gateway-system
+  labels:
+    app.kubernetes.io/name: cert-manager-keycloak-tokenrequest
+    app.kubernetes.io/part-of: ai-platform
+subjects:
+  - kind: ServiceAccount
+    name: cert-manager
+    namespace: cert-manager
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: cert-manager-keycloak-tokenrequest

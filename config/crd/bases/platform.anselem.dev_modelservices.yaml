@@ -345,6 +345,15 @@ spec:
                   Security contains Pod-level and container-level security configuration.
                   When omitted, the controller will apply its secure defaults.
                 properties:
+                  automountServiceAccountToken:
+                    default: false
+                    description: |-
+                      AutomountServiceAccountToken controls whether Kubernetes API credentials
+                      are automatically mounted into the workload Pod.
+
+                      Model-serving workloads should normally not require direct Kubernetes
+                      API access.
+                    type: boolean
                   fsGroup:
                     default: 101
                     description: |-

@@ -38,8 +38,10 @@ import (
 var _ = Describe("ModelService Controller", func() {
 	Context("When reconciling a resource", func() {
 		const (
-			resourceName      = "test-resource"
-			resourceNamespace = "default"
+			resourceName              = "test-resource"
+			resourceNamespace         = "default"
+			gatewayDataPlaneNamespace = "envoy-gateway-system"
+			namespaceNameLabel        = "kubernetes.io/metadata.name"
 		)
 
 		ctx := context.Background()

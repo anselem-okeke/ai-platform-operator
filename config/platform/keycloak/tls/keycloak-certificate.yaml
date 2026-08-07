@@ -1,0 +1,34 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: auth-ai-platform-local
+  namespace: gateway-system
+  labels:
+    app.kubernetes.io/name: auth-ai-platform-local
+    app.kubernetes.io/component: gateway-certificate
+    app.kubernetes.io/part-of: ai-platform
+spec:
+  secretName: auth-ai-platform-local-tls
+
+  commonName: auth.ai-platform.local
+
+  dnsNames:
+    - auth.ai-platform.local
+
+  duration: 720h
+  renewBefore: 168h
+
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+
+  usages:
+    - digital signature
+    - key encipherment
+    - server auth
+
+  issuerRef:
+    name: vault-keycloak-issuer
+    kind: Issuer
+    group: cert-manager.io
