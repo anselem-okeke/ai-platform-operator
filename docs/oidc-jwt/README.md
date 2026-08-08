@@ -15,29 +15,51 @@ It is written so that another engineer can:
 
 ---
 
-## Final Architecture
+## Architecture
 
-```text
-Client
-  ↓
-Keycloak authorization or token endpoint
-  ↓
-JWT access token
-  ↓
-Vault-issued HTTPS certificate
-  ↓
-Envoy Gateway
-  ↓
-JWT signature, issuer, audience, and expiry validation
-  ↓
-Role and HTTP-method authorization
-  ↓
-HTTPRoute
-  ↓
-Service
-  ↓
-fraud-model Pods
-```
+![img](/img/jwt-auth.png)
+
+[//]: # (```text)
+
+[//]: # (Client)
+
+[//]: # (  ↓)
+
+[//]: # (Keycloak authorization or token endpoint)
+
+[//]: # (  ↓)
+
+[//]: # (JWT access token)
+
+[//]: # (  ↓)
+
+[//]: # (Vault-issued HTTPS certificate)
+
+[//]: # (  ↓)
+
+[//]: # (Envoy Gateway)
+
+[//]: # (  ↓)
+
+[//]: # (JWT signature, issuer, audience, and expiry validation)
+
+[//]: # (  ↓)
+
+[//]: # (Role and HTTP-method authorization)
+
+[//]: # (  ↓)
+
+[//]: # (HTTPRoute)
+
+[//]: # (  ↓)
+
+[//]: # (Service)
+
+[//]: # (  ↓)
+
+[//]: # (fraud-model Pods)
+
+[//]: # (```)
 
 The implementation uses:
 
@@ -85,47 +107,9 @@ Kubernetes RBAC
 
 ---
 
-## Recommended Reading Order
+## Recommended Reading and Reproduction Order
 
-For a complete understanding:
-
-```text
-00
-  ↓
-01
-  ↓
-02
-  ↓
-03
-  ↓
-04
-  ↓
-05
-  ↓
-06
-  ↓
-07
-  ↓
-08
-  ↓
-09
-  ↓
-10
-  ↓
-11
-  ↓
-12
-  ↓
-13
-  ↓
-14
-```
-
----
-
-## Reproduction Order
-
-For a fresh environment, follow:
+For a complete understanding and fresh environment, follow:
 
 ```text
 01-prerequisites-and-environment.md

@@ -830,12 +830,8 @@ The REST API will be implemented in Go and will manage only `ModelService` resou
 
 ## License
 
-This project is licensed under the Apache License 2.0.
+- This project is licensed under the Apache License 2.0.
 
-See:
+- See: [LICENSE](LICENSE)
 
-```text
-LICENSE
-```
-
-Any third-party code, templates, or dependencies remain subject to their respective licenses and attribution requirements.
+> Any third-party code, templates, or dependencies remain subject to their respective licenses and attribution requirements.
