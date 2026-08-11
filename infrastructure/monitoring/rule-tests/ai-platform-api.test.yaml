@@ -1,0 +1,218 @@
+rule_files:
+  - ai-platform-api.rules.yaml
+
+evaluation_interval: 1m
+fuzzy_compare: true
+
+tests:
+  - name: api-down-fires-after-two-minutes
+    interval: 1m
+
+    input_series:
+      - series: 'up{job="ai-platform-api",namespace="ai-platform"}'
+        values: '0 0 0 0'
+
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: AIPlatformAPIDown
+        exp_alerts: []
+
+      - eval_time: 3m
+        alertname: AIPlatformAPIDown
+        exp_alerts:
+          - exp_labels:
+              job: ai-platform-api
+              namespace: ai-platform
+              service: ai-platform-api
+              severity: critical
+            exp_annotations:
+              summary: "AI Platform API is unavailable"
+              description: "The AI Platform API has no healthy Prometheus scrape targets, or its targets are missing, for at least 2 minutes."
+
+  - name: high-5xx-rate-fires
+    interval: 1m
+
+    input_series:
+      - series: 'ai_platform_api_http_requests_total{route="/api/v1/model-services",status="200"}'
+        values: '0+90x11'
+
+      - series: 'ai_platform_api_http_requests_total{route="/api/v1/model-services",status="500"}'
+        values: '0+10x11'
+
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: AIPlatformAPIHigh5xxRate
+        exp_alerts: []
+
+      - eval_time: 10m
+        alertname: AIPlatformAPIHigh5xxRate
+        exp_alerts:
+          - exp_labels:
+              service: ai-platform-api
+              severity: warning
+            exp_annotations:
+              summary: "AI Platform API 5xx error rate is elevated"
+              description: "More than 5% of customer-facing AI Platform API requests have returned HTTP 5xx responses for at least 5 minutes."
+
+  - name: high-p95-latency-fires
+    interval: 1m
+
+    input_series:
+      - series: 'ai_platform_api_http_request_duration_seconds_bucket{route="/api/v1/model-services",le="0.1"}'
+        values: '0+10x11'
+
+      - series: 'ai_platform_api_http_request_duration_seconds_bucket{route="/api/v1/model-services",le="0.25"}'
+        values: '0+20x11'
+
+      - series: 'ai_platform_api_http_request_duration_seconds_bucket{route="/api/v1/model-services",le="0.5"}'
+        values: '0+40x11'
+
+      - series: 'ai_platform_api_http_request_duration_seconds_bucket{route="/api/v1/model-services",le="1"}'
+        values: '0+100x11'
+
+      - series: 'ai_platform_api_http_request_duration_seconds_bucket{route="/api/v1/model-services",le="+Inf"}'
+        values: '0+100x11'
+
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: AIPlatformAPIHighP95Latency
+        exp_alerts: [ ]
+
+      - eval_time: 10m
+        alertname: AIPlatformAPIHighP95Latency
+        exp_alerts:
+          - exp_labels:
+              service: ai-platform-api
+              severity: warning
+            exp_annotations:
+              summary: "AI Platform API p95 latency is high"
+              description: "The p95 latency of customer-facing AI Platform API requests has exceeded 500 ms for at least 5 minutes."
+
+  - name: high-p95-latency-fires
+    interval: 1m
+
+    input_series:
+      - series: 'ai_platform_api_http_request_duration_seconds_bucket{route="/api/v1/model-services",le="0.1"}'
+        values: '0+10x11'
+
+      - series: 'ai_platform_api_http_request_duration_seconds_bucket{route="/api/v1/model-services",le="0.25"}'
+        values: '0+20x11'
+
+      - series: 'ai_platform_api_http_request_duration_seconds_bucket{route="/api/v1/model-services",le="0.5"}'
+        values: '0+40x11'
+
+      - series: 'ai_platform_api_http_request_duration_seconds_bucket{route="/api/v1/model-services",le="1"}'
+        values: '0+100x11'
+
+      - series: 'ai_platform_api_http_request_duration_seconds_bucket{route="/api/v1/model-services",le="+Inf"}'
+        values: '0+100x11'
+
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: AIPlatformAPIHighP95Latency
+        exp_alerts: [ ]
+
+      - eval_time: 10m
+        alertname: AIPlatformAPIHighP95Latency
+        exp_alerts:
+          - exp_labels:
+              service: ai-platform-api
+              severity: warning
+            exp_annotations:
+              summary: "AI Platform API p95 latency is high"
+              description: "The p95 latency of customer-facing AI Platform API requests has exceeded 500 ms for at least 5 minutes."
+
+  - name: sli-error-ratio-recording-rule
+    interval: 1m
+
+    input_series:
+      - series: 'ai_platform_api_http_requests_total{route="/api/v1/model-services",status="200"}'
+        values: '0+90x10'
+
+      - series: 'ai_platform_api_http_requests_total{route="/api/v1/model-services",status="500"}'
+        values: '0+10x10'
+
+    promql_expr_test:
+      - expr: 'ai_platform_api:sli_error_ratio:5m'
+        eval_time: 10m
+        exp_samples:
+          - labels: 'ai_platform_api:sli_error_ratio:5m'
+            value: 0.1
+
+  - name: error-budget-fast-burn-fires
+    interval: 1m
+
+    input_series:
+      - series: 'ai_platform_api_http_requests_total{route="/api/v1/model-services",status="200"}'
+        values: '0+98x15'
+
+      - series: 'ai_platform_api_http_requests_total{route="/api/v1/model-services",status="500"}'
+        values: '0+2x15'
+
+    promql_expr_test:
+      - expr: 'ai_platform_api:slo_error_budget_burn_rate:5m'
+        eval_time: 4m
+        exp_samples:
+          - labels: 'ai_platform_api:slo_error_budget_burn_rate:5m'
+            value: 20
+
+      - expr: 'ai_platform_api:slo_error_budget_burn_rate:1h'
+        eval_time: 4m
+        exp_samples:
+          - labels: 'ai_platform_api:slo_error_budget_burn_rate:1h'
+            value: 20
+
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: AIPlatformAPIErrorBudgetFastBurn
+        exp_alerts: [ ]
+
+      - eval_time: 4m
+        alertname: AIPlatformAPIErrorBudgetFastBurn
+        exp_alerts:
+          - exp_labels:
+              service: ai-platform-api
+              severity: critical
+              slo: availability
+            exp_annotations:
+              summary: "AI Platform API is rapidly consuming its availability error budget"
+              description: "The AI Platform API is burning its 99.9% availability error budget at more than 14.4x across both the 5-minute and 1-hour windows."
+
+  - name: error-budget-slow-burn-fires
+    interval: 1m
+
+    input_series:
+      - series: 'ai_platform_api_http_requests_total{route="/api/v1/model-services",status="200"}'
+        values: '0+99x30'
+
+      - series: 'ai_platform_api_http_requests_total{route="/api/v1/model-services",status="500"}'
+        values: '0+1x30'
+
+    promql_expr_test:
+      - expr: 'ai_platform_api:slo_error_budget_burn_rate:1h'
+        eval_time: 10m
+        exp_samples:
+          - labels: 'ai_platform_api:slo_error_budget_burn_rate:1h'
+            value: 10
+
+      - expr: 'ai_platform_api:slo_error_budget_burn_rate:6h'
+        eval_time: 10m
+        exp_samples:
+          - labels: 'ai_platform_api:slo_error_budget_burn_rate:6h'
+            value: 10
+
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: AIPlatformAPIErrorBudgetSlowBurn
+        exp_alerts: [ ]
+
+      - eval_time: 30m
+        alertname: AIPlatformAPIErrorBudgetSlowBurn
+        exp_alerts:
+          - exp_labels:
+              service: ai-platform-api
+              severity: warning
+              slo: availability
+            exp_annotations:
+              summary: "AI Platform API is steadily consuming its availability error budget"
+              description: "The AI Platform API is burning its 99.9% availability error budget at more than 6x across both the 1-hour and 6-hour windows."

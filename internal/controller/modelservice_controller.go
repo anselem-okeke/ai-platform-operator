@@ -535,6 +535,10 @@ func (r *ModelServiceReconciler) reconcileServiceAccount(
 func resolveAutomountServiceAccountToken(
 	modelService *platformv1alpha1.ModelService,
 ) bool {
+	if modelService.Spec.Security == nil {
+		return false
+	}
+
 	if modelService.Spec.Security.AutomountServiceAccountToken == nil {
 		return false
 	}

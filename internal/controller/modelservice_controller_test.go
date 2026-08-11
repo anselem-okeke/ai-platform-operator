@@ -1271,5 +1271,185 @@ var _ = Describe("ModelService Controller", func() {
 				}).Should(Succeed())
 			},
 		)
+		It(
+			"should default ServiceAccount token automount to false when security is omitted",
+			func() {
+				By("loading the ModelService")
+
+				modelService :=
+					&platformv1alpha1.ModelService{}
+
+				Expect(
+					k8sClient.Get(
+						ctx,
+						typeNamespacedName,
+						modelService,
+					),
+				).To(Succeed())
+
+				By("omitting the security configuration")
+
+				modelService.Spec.Security = nil
+
+				Expect(
+					k8sClient.Update(
+						ctx,
+						modelService,
+					),
+				).To(Succeed())
+
+				By("reconciling the ModelService")
+
+				controllerReconciler :=
+					&ModelServiceReconciler{
+						Client: k8sClient,
+						Scheme: k8sClient.Scheme(),
+					}
+
+				_, err :=
+					controllerReconciler.Reconcile(
+						ctx,
+						reconcile.Request{
+							NamespacedName: typeNamespacedName,
+						},
+					)
+
+				Expect(err).NotTo(HaveOccurred())
+
+				By("verifying the ServiceAccount uses the secure default")
+
+				serviceAccount :=
+					&corev1.ServiceAccount{}
+
+				Eventually(
+					func() error {
+						return k8sClient.Get(
+							ctx,
+							typeNamespacedName,
+							serviceAccount,
+						)
+					},
+				).Should(Succeed())
+
+				Expect(
+					serviceAccount.
+						AutomountServiceAccountToken,
+				).NotTo(BeNil())
+
+				Expect(
+					*serviceAccount.
+						AutomountServiceAccountToken,
+				).To(BeFalse())
+
+				By("verifying the Deployment uses the same secure default")
+
+				deployment :=
+					&appsv1.Deployment{}
+
+				Eventually(
+					func() error {
+						return k8sClient.Get(
+							ctx,
+							typeNamespacedName,
+							deployment,
+						)
+					},
+				).Should(Succeed())
+
+				Expect(
+					deployment.
+						Spec.
+						Template.
+						Spec.
+						AutomountServiceAccountToken,
+				).NotTo(BeNil())
+
+				Expect(
+					*deployment.
+						Spec.
+						Template.
+						Spec.
+						AutomountServiceAccountToken,
+				).To(BeFalse())
+			},
+		)
+		It(
+			"should default ServiceAccount token automount to false when automount is omitted",
+			func() {
+				By("loading the ModelService")
+
+				modelService :=
+					&platformv1alpha1.ModelService{}
+
+				Expect(
+					k8sClient.Get(
+						ctx,
+						typeNamespacedName,
+						modelService,
+					),
+				).To(Succeed())
+
+				By("providing security configuration without an automount value")
+
+				modelService.Spec.Security =
+					&platformv1alpha1.ModelServiceSecurity{
+						RunAsNonRoot:           true,
+						RunAsUser:              101,
+						RunAsGroup:             101,
+						FSGroup:                101,
+						ReadOnlyRootFilesystem: true,
+					}
+
+				Expect(
+					k8sClient.Update(
+						ctx,
+						modelService,
+					),
+				).To(Succeed())
+
+				By("reconciling the ModelService")
+
+				controllerReconciler :=
+					&ModelServiceReconciler{
+						Client: k8sClient,
+						Scheme: k8sClient.Scheme(),
+					}
+
+				_, err :=
+					controllerReconciler.Reconcile(
+						ctx,
+						reconcile.Request{
+							NamespacedName: typeNamespacedName,
+						},
+					)
+
+				Expect(err).NotTo(HaveOccurred())
+
+				By("verifying ServiceAccount token automount defaults to false")
+
+				serviceAccount :=
+					&corev1.ServiceAccount{}
+
+				Eventually(
+					func() error {
+						return k8sClient.Get(
+							ctx,
+							typeNamespacedName,
+							serviceAccount,
+						)
+					},
+				).Should(Succeed())
+
+				Expect(
+					serviceAccount.
+						AutomountServiceAccountToken,
+				).NotTo(BeNil())
+
+				Expect(
+					*serviceAccount.
+						AutomountServiceAccountToken,
+				).To(BeFalse())
+			},
+		)
 	})
 })

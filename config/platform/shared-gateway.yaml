@@ -44,6 +44,25 @@ spec:
             matchLabels:
               shared-gateway-access: "true"
 
+    - name: platform-api-https
+      hostname: api.ai-platform.local
+      protocol: HTTPS
+      port: 443
+
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: ""
+            kind: Secret
+            name: api-ai-platform-local-tls
+
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              shared-gateway-access: "true"
+
     - name: fraud-model-https
       hostname: fraud-model.local
       protocol: HTTPS
