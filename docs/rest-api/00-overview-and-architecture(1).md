@@ -58,37 +58,8 @@ The REST API does **not** replace the operator. The API manages desired state; t
 ---
 
 ## 3. High-Level Architecture
+![img](/img/AI-Platform-Secure-API-Flow.png)
 
-```mermaid
-flowchart LR
-    U[User / CLI / Automation]
-    KC[Keycloak<br/>OIDC / OAuth2]
-    EG[Envoy Gateway<br/>Gateway API]
-    SP[Envoy SecurityPolicy<br/>JWT + Role Authorization]
-    API[AI Platform REST API<br/>Go net/http]
-    K8S[Kubernetes API]
-    MS[ModelService CR<br/>platform.anselem.dev/v1alpha1]
-    OP[AI Platform Operator]
-    WR[Serving Workload<br/>Deployment / Service / PVC / SA / Policies / Routes]
-    VAULT[Vault PKI]
-    TLS[API TLS Certificate]
-    PROM[Prometheus]
-    GRAF[Grafana]
-
-    U -->|Authenticate| KC
-    KC -->|JWT access token| U
-    U -->|HTTPS + Bearer token| EG
-    EG --> SP
-    SP -->|Authorized request| API
-    API -->|controller-runtime client| K8S
-    K8S --> MS
-    MS --> OP
-    OP --> WR
-    VAULT --> TLS
-    TLS --> EG
-    PROM -->|Scrape /metrics| API
-    PROM --> GRAF
-```
 
 External request path:
 
