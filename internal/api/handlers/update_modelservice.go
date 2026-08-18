@@ -95,7 +95,7 @@ func (h *UpdateModelServiceHandler) ServeHTTP(
 				response.APIError{
 					Error: response.ErrorBody{
 						Code:      codeRequestTooLarge,
-						Message:   "request body is too large",
+						Message:   messageRequestBodyTooLarge,
 						RequestID: middleware.RequestIDFromContext(r.Context()),
 					},
 				},
@@ -110,7 +110,7 @@ func (h *UpdateModelServiceHandler) ServeHTTP(
 			response.APIError{
 				Error: response.ErrorBody{
 					Code:      codeInvalidJSON,
-					Message:   "request body contains invalid JSON",
+					Message:   messageRequestBodyInvalidJSON,
 					RequestID: middleware.RequestIDFromContext(r.Context()),
 				},
 			},
@@ -128,7 +128,7 @@ func (h *UpdateModelServiceHandler) ServeHTTP(
 			response.APIError{
 				Error: response.ErrorBody{
 					Code:      codeInvalidJSON,
-					Message:   "request body must contain one JSON object",
+					Message:   messageRequestBodySingleJSONObject,
 					RequestID: middleware.RequestIDFromContext(r.Context()),
 				},
 			},
@@ -151,7 +151,7 @@ func (h *UpdateModelServiceHandler) ServeHTTP(
 			response.APIError{
 				Error: response.ErrorBody{
 					Code:      codeValidationFailed,
-					Message:   "request validation failed",
+					Message:   messageRequestValidationFailed,
 					RequestID: middleware.RequestIDFromContext(r.Context()),
 					Details:   details,
 				},
@@ -209,7 +209,7 @@ func (h *UpdateModelServiceHandler) ServeHTTP(
 			response.APIError{
 				Error: response.ErrorBody{
 					Code:      codeKubernetesUnavailable,
-					Message:   "unable to load ModelService",
+					Message:   messageUnableToLoadModelService,
 					RequestID: middleware.RequestIDFromContext(r.Context()),
 				},
 			},

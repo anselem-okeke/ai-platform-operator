@@ -4,11 +4,16 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+const (
+	metricsNamespace = "ai_platform"
+	metricsSubsystem = "api"
+)
+
 var (
 	HTTPRequestsTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Namespace: "ai_platform",
-			Subsystem: "api",
+			Namespace: metricsNamespace,
+			Subsystem: metricsSubsystem,
 			Name:      "http_requests_total",
 			Help:      "Total number of HTTP requests handled by the AI Platform API.",
 		},

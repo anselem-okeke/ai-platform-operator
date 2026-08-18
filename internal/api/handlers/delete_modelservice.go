@@ -109,7 +109,7 @@ func (h *DeleteModelServiceHandler) ServeHTTP(
 			response.APIError{
 				Error: response.ErrorBody{
 					Code:      codeKubernetesUnavailable,
-					Message:   "unable to load ModelService",
+					Message:   messageUnableToLoadModelService,
 					RequestID: middleware.RequestIDFromContext(r.Context()),
 				},
 			},

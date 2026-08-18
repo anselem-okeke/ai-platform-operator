@@ -9,6 +9,8 @@ import (
 	apimetrics "github.com/anselem-okeke/ai-platform-operator/internal/api/metrics"
 )
 
+const metricsPath = "/metrics"
+
 func RequestMetrics(
 	next http.Handler,
 ) http.Handler {
@@ -19,7 +21,7 @@ func RequestMetrics(
 		) {
 			// Do not include Prometheus scrape traffic in the API
 			// request metrics themselves.
-			if r.URL.Path == "/metrics" {
+			if r.URL.Path == metricsPath {
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -78,8 +80,8 @@ func metricRoute(
 	case r.URL.Path == "/readyz":
 		return "/readyz"
 
-	case r.URL.Path == "/metrics":
-		return "/metrics"
+	case r.URL.Path == metricsPath:
+		return metricsPath
 
 	case r.URL.Path == "/api/v1/model-services":
 		return "/api/v1/model-services"
