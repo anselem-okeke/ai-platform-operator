@@ -1,29 +1,32 @@
+# syntax=docker/dockerfile:1
+
 # Build the AI Platform REST API binary.
-FROM golang:1.26 AS builder
+FROM golang:1.26.6 AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
 
 WORKDIR /workspace
 
-COPY go.mod go.mod
-COPY go.sum go.sum
+COPY go.mod go.sum ./
 
-RUN go mod download
+RUN --mount=type=cache,target=/go/pkg/mod \
+    go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=0 \
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 \
     GOOS=${TARGETOS:-linux} \
     GOARCH=${TARGETARCH} \
     go build \
-    -trimpath \
-    -ldflags="-s -w" \
-    -o /platform-api \
-    ./cmd/platform-api
+      -trimpath \
+      -ldflags="-s -w" \
+      -o /platform-api \
+      ./cmd/platform-api
 
-# Minimal non-root runtime image.
-FROM gcr.io/distroless/static:nonroot
+# Minimal non-root runtime.
+FROM gcr.io/distroless/static-debian13:nonroot
 
 WORKDIR /
 

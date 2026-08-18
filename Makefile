@@ -1,5 +1,8 @@
-# Image URL to use all building/pushing image targets
+# Image URL to use for building/pushing the operator image
 IMG ?= controller:latest
+
+# Image URL to use for building/pushing the AI Platform API image
+API_IMG ?= ai-platform-api:dev
 # YEAR defines the year value used for substituting the YEAR placeholder in the boilerplate header.
 YEAR ?= $(shell date +%Y)
 
@@ -126,6 +129,17 @@ docker-build: ## Build docker image with the manager.
 .PHONY: docker-push
 docker-push: ## Push docker image with the manager.
 	$(CONTAINER_TOOL) push ${IMG}
+
+.PHONY: api-docker-build
+api-docker-build: ## Build the AI Platform API container image.
+	$(CONTAINER_TOOL) build \
+		-f Dockerfile.platform-api \
+		-t ${API_IMG} \
+		.
+
+.PHONY: api-docker-push
+api-docker-push: ## Push the AI Platform API container image.
+	$(CONTAINER_TOOL) push ${API_IMG}
 
 # PLATFORMS defines the target platforms for the manager image be built to provide support to multiple
 # architectures. (i.e. make docker-buildx IMG=myregistry/mypoperator:0.0.1). To use this option you need to:
