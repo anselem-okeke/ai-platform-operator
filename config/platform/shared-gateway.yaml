@@ -19,6 +19,9 @@ spec:
       port: 80
 
       allowedRoutes:
+        kinds:
+          - group: gateway.networking.k8s.io
+            kind: HTTPRoute
         namespaces:
           from: Selector
           selector:
@@ -80,3 +83,18 @@ spec:
           selector:
             matchLabels:
               shared-gateway-access: "true"
+
+    - name: argocd-https
+      hostname: argocd.ai-platform.local
+      port: 443
+      protocol: HTTPS
+      allowedRoutes:
+        namespaces:
+          from: All
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: argocd-ai-platform-local-tls
+            kind: Secret
+            group: ""
+

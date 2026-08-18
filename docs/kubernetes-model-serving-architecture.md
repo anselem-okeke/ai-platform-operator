@@ -23,69 +23,130 @@ The architecture separates two different responsibilities:
 
 ---
 
-# 2. Correct Architecture Sketch
+# 2. Architecture
 
-```text
-                         PLATFORM USERS
-                Data Scientists / ML Engineers
-                              │
-                              │ HTTPS
-                              ▼
+![img](/img/ai-platform-architecture.png)
 
-┌────────────────────────── KUBERNETES CLUSTER ──────────────────────────┐
-│                                                                       │
-│                      PLATFORM CONTROL PLANE                           │
-│                                                                       │
-│  Ingress                                                              │
-│     │                                                                 │
-│     ▼                                                                 │
-│  AuthN / AuthZ ────────────────────────────────────────────────────────┼──► OIDC /
-│     │                                                                 │    Identity Provider
-│     ▼                                                                 │
-│  REST API                                                             │
-│     │                                                                 │
-│     │ create / update ModelService                                    │
-│     ▼                                                                 │
-│  Kubernetes API Server                                                │
-│     │                                                                 │
-│     ├──────────────────────────────► ModelService CR                   │
-│     │                                  desired state                  │
-│     │                                                                 │
-│     ◄──────────────────────────────► Go Operator                       │
-│          watch / reconcile / update status                            │
-│                                         │                             │
-│                                         ├─────────────────────────────┼──► MLflow
-│                                         │                                 Model Registry
-│                                         │ resolve model/version       │
-│                                         │                             │
-│                                         ▼                             │
-│                               KServe InferenceService                 │
-│                                         │                             │
-│                                         │ KServe provisions           │
-│                                         ▼                             │
-│                                                                       │
-│                        INFERENCE DATA PLANE                           │
-│                                                                       │
-│                         Inference Gateway / HTTPRoute                 │
-│                                         │                             │
-│                                         ▼                             │
-│                              Predictor Service                        │
-│                                         │                             │
-│                                         ▼                             │
-│                               Predictor Pods                          │
-│                                         │                             │
-│                                         ├─────────────────────────────┼──► Object Storage
-│                                         │                                 model artifacts
-│                                         │                             │
-│  Kubernetes node / container runtime ──┼─────────────────────────────┼──► Container Registry
-│                                                                           runtime image
-│                                                                       │
-└───────────────────────────────────────────────────────────────────────┘
-                              ▲
-                              │ HTTPS prediction request
-                              │
-                    APPLICATION CLIENTS
-```
+[//]: # (```text)
+
+[//]: # (                         PLATFORM USERS)
+
+[//]: # (                Data Scientists / ML Engineers)
+
+[//]: # (                              │)
+
+[//]: # (                              │ HTTPS)
+
+[//]: # (                              ▼)
+
+[//]: # ()
+[//]: # (┌────────────────────────── KUBERNETES CLUSTER ──────────────────────────┐)
+
+[//]: # (│                                                                       │)
+
+[//]: # (│                      PLATFORM CONTROL PLANE                           │)
+
+[//]: # (│                                                                       │)
+
+[//]: # (│  Ingress                                                              │)
+
+[//]: # (│     │                                                                 │)
+
+[//]: # (│     ▼                                                                 │)
+
+[//]: # (│  AuthN / AuthZ ────────────────────────────────────────────────────────┼──► OIDC /)
+
+[//]: # (│     │                                                                 │    Identity Provider)
+
+[//]: # (│     ▼                                                                 │)
+
+[//]: # (│  REST API                                                             │)
+
+[//]: # (│     │                                                                 │)
+
+[//]: # (│     │ create / update ModelService                                    │)
+
+[//]: # (│     ▼                                                                 │)
+
+[//]: # (│  Kubernetes API Server                                                │)
+
+[//]: # (│     │                                                                 │)
+
+[//]: # (│     ├──────────────────────────────► ModelService CR                   │)
+
+[//]: # (│     │                                  desired state                  │)
+
+[//]: # (│     │                                                                 │)
+
+[//]: # (│     ◄──────────────────────────────► Go Operator                       │)
+
+[//]: # (│          watch / reconcile / update status                            │)
+
+[//]: # (│                                         │                             │)
+
+[//]: # (│                                         ├─────────────────────────────┼──► MLflow)
+
+[//]: # (│                                         │                                 Model Registry)
+
+[//]: # (│                                         │ resolve model/version       │)
+
+[//]: # (│                                         │                             │)
+
+[//]: # (│                                         ▼                             │)
+
+[//]: # (│                               KServe InferenceService                 │)
+
+[//]: # (│                                         │                             │)
+
+[//]: # (│                                         │ KServe provisions           │)
+
+[//]: # (│                                         ▼                             │)
+
+[//]: # (│                                                                       │)
+
+[//]: # (│                        INFERENCE DATA PLANE                           │)
+
+[//]: # (│                                                                       │)
+
+[//]: # (│                         Inference Gateway / HTTPRoute                 │)
+
+[//]: # (│                                         │                             │)
+
+[//]: # (│                                         ▼                             │)
+
+[//]: # (│                              Predictor Service                        │)
+
+[//]: # (│                                         │                             │)
+
+[//]: # (│                                         ▼                             │)
+
+[//]: # (│                               Predictor Pods                          │)
+
+[//]: # (│                                         │                             │)
+
+[//]: # (│                                         ├─────────────────────────────┼──► Object Storage)
+
+[//]: # (│                                         │                                 model artifacts)
+
+[//]: # (│                                         │                             │)
+
+[//]: # (│  Kubernetes node / container runtime ──┼─────────────────────────────┼──► Container Registry)
+
+[//]: # (│                                                                           runtime image)
+
+[//]: # (│                                                                       │)
+
+[//]: # (└───────────────────────────────────────────────────────────────────────┘)
+
+[//]: # (                              ▲)
+
+[//]: # (                              │ HTTPS prediction request)
+
+[//]: # (                              │)
+
+[//]: # (                    APPLICATION CLIENTS)
+
+[//]: # (```)
 
 ---
 

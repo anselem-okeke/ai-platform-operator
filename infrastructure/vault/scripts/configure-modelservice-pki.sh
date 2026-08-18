@@ -13,7 +13,7 @@ vault read "${VAULT_PKI_PATH}/cert/ca" >/dev/null 2>&1 ||
   vault write -field=certificate "${VAULT_PKI_PATH}/root/generate/internal"     common_name="AI Platform ModelService Root CA" ttl=87600h key_type=ec key_bits=256     > /tmp/modelservice-root-ca.crt
 #vault write "${VAULT_PKI_PATH}/roles/${VAULT_PKI_ROLE}"   allowed_domains="fraud-model.local" allow_bare_domains=true   allow_subdomains=false enforce_hostnames=true key_type=ec key_bits=256 max_ttl=720h
 vault write "${VAULT_PKI_PATH}/roles/${VAULT_PKI_ROLE}" \
-  allowed_domains="fraud-model.local,api.ai-platform.local" \
+  allowed_domains="fraud-model.local,api.ai-platform.local,argocd.ai-platform.local" \
   allow_bare_domains=true \
   allow_subdomains=false \
   enforce_hostnames=true \

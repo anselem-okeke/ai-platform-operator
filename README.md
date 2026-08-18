@@ -1,6 +1,12 @@
 # AI Platform Operator
 
-A Kubernetes operator and secure platform foundation for deploying, exposing, and managing model-serving workloads through a declarative `ModelService` custom resource.
+> **Architecture:** For the full target platform architecture, including the
+> REST API, MLflow, KServe, model registry, inference data plane, observability,
+> and lifecycle design, see [Architecture](https://github.com/anselem-okeke/ai-platform-operator/blob/main/docs/kubernetes-model-serving-architecture.md).
+
+![img](/img/ai-platform-architecture.png)
+
+A Kubernetes operator and secure platform for deploying, exposing, and managing model-serving workloads through a declarative `ModelService` custom resource.
 
 The project combines Kubernetes-native lifecycle management with secure HTTPS exposure, Keycloak-based OpenID Connect authentication, JWT validation, role-based authorization, Vault-backed certificate issuance, and least-privilege security controls.
 
