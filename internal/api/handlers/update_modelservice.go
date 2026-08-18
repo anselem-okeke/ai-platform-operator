@@ -61,8 +61,8 @@ func (h *UpdateModelServiceHandler) ServeHTTP(
 			http.StatusBadRequest,
 			response.APIError{
 				Error: response.ErrorBody{
-					Code:      "INVALID_MODEL_SERVICE_NAME",
-					Message:   "ModelService name is required",
+					Code:      codeInvalidModelServiceName,
+					Message:   messageModelServiceNameRequired,
 					RequestID: middleware.RequestIDFromContext(r.Context()),
 				},
 			},
@@ -94,7 +94,7 @@ func (h *UpdateModelServiceHandler) ServeHTTP(
 				http.StatusRequestEntityTooLarge,
 				response.APIError{
 					Error: response.ErrorBody{
-						Code:      "REQUEST_TOO_LARGE",
+						Code:      codeRequestTooLarge,
 						Message:   "request body is too large",
 						RequestID: middleware.RequestIDFromContext(r.Context()),
 					},
@@ -109,7 +109,7 @@ func (h *UpdateModelServiceHandler) ServeHTTP(
 			http.StatusBadRequest,
 			response.APIError{
 				Error: response.ErrorBody{
-					Code:      "INVALID_JSON",
+					Code:      codeInvalidJSON,
 					Message:   "request body contains invalid JSON",
 					RequestID: middleware.RequestIDFromContext(r.Context()),
 				},
@@ -127,7 +127,7 @@ func (h *UpdateModelServiceHandler) ServeHTTP(
 			http.StatusBadRequest,
 			response.APIError{
 				Error: response.ErrorBody{
-					Code:      "INVALID_JSON",
+					Code:      codeInvalidJSON,
 					Message:   "request body must contain one JSON object",
 					RequestID: middleware.RequestIDFromContext(r.Context()),
 				},
@@ -150,7 +150,7 @@ func (h *UpdateModelServiceHandler) ServeHTTP(
 			http.StatusBadRequest,
 			response.APIError{
 				Error: response.ErrorBody{
-					Code:      "VALIDATION_FAILED",
+					Code:      codeValidationFailed,
 					Message:   "request validation failed",
 					RequestID: middleware.RequestIDFromContext(r.Context()),
 					Details:   details,
@@ -174,7 +174,7 @@ func (h *UpdateModelServiceHandler) ServeHTTP(
 				http.StatusNotFound,
 				response.APIError{
 					Error: response.ErrorBody{
-						Code: "MODEL_SERVICE_NOT_FOUND",
+						Code: codeModelServiceNotFound,
 						Message: "ModelService \"" +
 							name +
 							"\" was not found",
@@ -208,7 +208,7 @@ func (h *UpdateModelServiceHandler) ServeHTTP(
 			http.StatusServiceUnavailable,
 			response.APIError{
 				Error: response.ErrorBody{
-					Code:      "KUBERNETES_UNAVAILABLE",
+					Code:      codeKubernetesUnavailable,
 					Message:   "unable to load ModelService",
 					RequestID: middleware.RequestIDFromContext(r.Context()),
 				},
@@ -266,7 +266,7 @@ func (h *UpdateModelServiceHandler) ServeHTTP(
 			http.StatusServiceUnavailable,
 			response.APIError{
 				Error: response.ErrorBody{
-					Code:      "KUBERNETES_UNAVAILABLE",
+					Code:      codeKubernetesUnavailable,
 					Message:   "unable to update ModelService",
 					RequestID: middleware.RequestIDFromContext(r.Context()),
 				},

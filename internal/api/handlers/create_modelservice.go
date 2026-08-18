@@ -63,8 +63,8 @@ func (h *CreateModelServiceHandler) ServeHTTP(
 			http.StatusMethodNotAllowed,
 			response.APIError{
 				Error: response.ErrorBody{
-					Code:      "METHOD_NOT_ALLOWED",
-					Message:   "method not allowed",
+					Code:      codeMethodNotAllowed,
+					Message:   messageMethodNotAllowed,
 					RequestID: middleware.RequestIDFromContext(r.Context()),
 				},
 			},
@@ -115,7 +115,7 @@ func (h *CreateModelServiceHandler) ServeHTTP(
 				http.StatusRequestEntityTooLarge,
 				response.APIError{
 					Error: response.ErrorBody{
-						Code:      "REQUEST_TOO_LARGE",
+						Code:      codeRequestTooLarge,
 						Message:   "request body is too large",
 						RequestID: middleware.RequestIDFromContext(r.Context()),
 					},
@@ -130,7 +130,7 @@ func (h *CreateModelServiceHandler) ServeHTTP(
 			http.StatusBadRequest,
 			response.APIError{
 				Error: response.ErrorBody{
-					Code:      "INVALID_JSON",
+					Code:      codeInvalidJSON,
 					Message:   "request body contains invalid JSON",
 					RequestID: middleware.RequestIDFromContext(r.Context()),
 				},
@@ -148,7 +148,7 @@ func (h *CreateModelServiceHandler) ServeHTTP(
 			http.StatusBadRequest,
 			response.APIError{
 				Error: response.ErrorBody{
-					Code:      "INVALID_JSON",
+					Code:      codeInvalidJSON,
 					Message:   "request body must contain one JSON object",
 					RequestID: middleware.RequestIDFromContext(r.Context()),
 				},
@@ -170,7 +170,7 @@ func (h *CreateModelServiceHandler) ServeHTTP(
 			http.StatusBadRequest,
 			response.APIError{
 				Error: response.ErrorBody{
-					Code:      "VALIDATION_FAILED",
+					Code:      codeValidationFailed,
 					Message:   "request validation failed",
 					RequestID: middleware.RequestIDFromContext(r.Context()),
 					Details:   details,
@@ -231,7 +231,7 @@ func (h *CreateModelServiceHandler) ServeHTTP(
 			http.StatusServiceUnavailable,
 			response.APIError{
 				Error: response.ErrorBody{
-					Code:      "KUBERNETES_UNAVAILABLE",
+					Code:      codeKubernetesUnavailable,
 					Message:   "unable to create ModelService",
 					RequestID: middleware.RequestIDFromContext(r.Context()),
 				},

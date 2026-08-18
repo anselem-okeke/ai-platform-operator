@@ -38,8 +38,8 @@ func (h *GetModelServiceStatusHandler) ServeHTTP(
 			http.StatusMethodNotAllowed,
 			response.APIError{
 				Error: response.ErrorBody{
-					Code:      "METHOD_NOT_ALLOWED",
-					Message:   "method not allowed",
+					Code:      codeMethodNotAllowed,
+					Message:   messageMethodNotAllowed,
 					RequestID: middleware.RequestIDFromContext(r.Context()),
 				},
 			},
@@ -55,8 +55,8 @@ func (h *GetModelServiceStatusHandler) ServeHTTP(
 			http.StatusBadRequest,
 			response.APIError{
 				Error: response.ErrorBody{
-					Code:      "INVALID_MODEL_SERVICE_NAME",
-					Message:   "ModelService name is required",
+					Code:      codeInvalidModelServiceName,
+					Message:   messageModelServiceNameRequired,
 					RequestID: middleware.RequestIDFromContext(r.Context()),
 				},
 			},
@@ -76,7 +76,7 @@ func (h *GetModelServiceStatusHandler) ServeHTTP(
 				http.StatusNotFound,
 				response.APIError{
 					Error: response.ErrorBody{
-						Code: "MODEL_SERVICE_NOT_FOUND",
+						Code: codeModelServiceNotFound,
 						Message: "ModelService \"" +
 							name +
 							"\" was not found",
@@ -110,7 +110,7 @@ func (h *GetModelServiceStatusHandler) ServeHTTP(
 			http.StatusServiceUnavailable,
 			response.APIError{
 				Error: response.ErrorBody{
-					Code:      "KUBERNETES_UNAVAILABLE",
+					Code:      codeKubernetesUnavailable,
 					Message:   "unable to get ModelService status",
 					RequestID: middleware.RequestIDFromContext(r.Context()),
 				},

@@ -43,8 +43,8 @@ func (h *ListModelServicesHandler) ServeHTTP(
 			http.StatusMethodNotAllowed,
 			response.APIError{
 				Error: response.ErrorBody{
-					Code:      "METHOD_NOT_ALLOWED",
-					Message:   "method not allowed",
+					Code:      codeMethodNotAllowed,
+					Message:   messageMethodNotAllowed,
 					RequestID: middleware.RequestIDFromContext(r.Context()),
 				},
 			},
@@ -73,7 +73,7 @@ func (h *ListModelServicesHandler) ServeHTTP(
 			http.StatusServiceUnavailable,
 			response.APIError{
 				Error: response.ErrorBody{
-					Code:      "KUBERNETES_UNAVAILABLE",
+					Code:      codeKubernetesUnavailable,
 					Message:   "unable to list ModelServices",
 					RequestID: middleware.RequestIDFromContext(r.Context()),
 				},

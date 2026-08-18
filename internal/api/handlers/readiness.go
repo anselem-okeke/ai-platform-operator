@@ -37,7 +37,7 @@ func (h *ReadinessHandler) ServeHTTP(
 		w.Header().Set("Allow", http.MethodGet)
 		http.Error(
 			w,
-			"method not allowed",
+			messageMethodNotAllowed,
 			http.StatusMethodNotAllowed,
 		)
 		return

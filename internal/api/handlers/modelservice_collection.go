@@ -38,7 +38,7 @@ func (h *ModelServiceCollectionHandler) ServeHTTP(
 
 		http.Error(
 			w,
-			"method not allowed",
+			messageMethodNotAllowed,
 			http.StatusMethodNotAllowed,
 		)
 	}
