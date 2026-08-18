@@ -1,5 +1,7 @@
 package auth
 
+import "slices"
+
 type Identity struct {
 	Subject           string
 	PreferredUsername string
@@ -10,11 +12,5 @@ type Identity struct {
 func (i Identity) HasRole(
 	role string,
 ) bool {
-	for _, assignedRole := range i.Roles {
-		if assignedRole == role {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(i.Roles, role)
 }

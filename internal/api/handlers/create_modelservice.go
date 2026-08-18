@@ -273,31 +273,6 @@ func ensureSingleJSONValue(
 	return err
 }
 
-//func createRequestToModelService(
-//	request apirequest.CreateModelServiceRequest,
-//	defaults ModelServiceDefaults,
-//) *platformv1alpha1.ModelService {
-//	pathPrefix := request.Exposure.PathPrefix
-//	if pathPrefix == "" {
-//		pathPrefix = "/"
-//	}
-//
-//	return &platformv1alpha1.ModelService{
-//		TypeMeta: metav1.TypeMeta{
-//			APIVersion: "platform.anselem.dev/v1alpha1",
-//			Kind:       "ModelService",
-//		},
-//		ObjectMeta: metav1.ObjectMeta{
-//			Name: request.Name,
-//		},
-//		Spec: platformv1alpha1.ModelServiceSpec{
-//			Image:    request.Image,
-//			Replicas: request.Replicas,
-//			Port:     request.Port,
-//		},
-//	}
-//}
-
 func createRequestToModelService(
 	request apirequest.CreateModelServiceRequest,
 	defaults ModelServiceDefaults,

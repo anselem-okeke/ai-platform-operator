@@ -3,6 +3,7 @@ package middleware
 import (
 	"log/slog"
 	"net/http"
+	"slices"
 
 	"github.com/anselem-okeke/ai-platform-operator/internal/api/response"
 )
@@ -51,14 +52,15 @@ func RequireAnyRole(
 					return
 				}
 
-				for _, role := range roles {
-					if identity.HasRole(role) {
-						next.ServeHTTP(
-							w,
-							r,
-						)
-						return
-					}
+				if slices.ContainsFunc(
+					roles,
+					identity.HasRole,
+				) {
+					next.ServeHTTP(
+						w,
+						r,
+					)
+					return
 				}
 
 				logger.WarnContext(
