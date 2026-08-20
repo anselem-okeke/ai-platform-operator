@@ -439,7 +439,7 @@ jobs:
           - API:
             \`ghcr.io/anselem-okeke/ai-platform-api@${API_DIGEST}\`
 
-          ### Supply-chain gates
+          ## Supply-chain gates
 
           - Go lint
           - Unit / envtest
