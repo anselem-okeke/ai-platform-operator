@@ -1,5 +1,7 @@
 # AI Platform Operator
 
+> **ArgoCD** is implemented separately in the **[AI Platform GitOps](https://github.com/anselem-okeke/ai-platform-gitops)** repository.
+
 > **Architecture:** For the full target platform architecture, including the
 > REST API, MLflow, KServe, model registry, inference data plane, observability,
 > and lifecycle design, see [Architecture](https://github.com/anselem-okeke/ai-platform-operator/blob/main/docs/kubernetes-model-serving-architecture.md).

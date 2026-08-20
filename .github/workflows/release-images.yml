@@ -15,6 +15,9 @@ jobs:
     name: Build Operator Image
     runs-on: ubuntu-latest
 
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+
     permissions:
       contents: read
       packages: write
@@ -104,6 +107,9 @@ jobs:
     name: Build API Image
     runs-on: ubuntu-latest
 
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+
     permissions:
       contents: read
       packages: write
@@ -188,3 +194,269 @@ jobs:
           predicate-type: https://spdx.dev/Document/v2.3
           predicate-path: api-sbom.spdx.json
           push-to-registry: true
+
+  update-gitops:
+    name: Create GitOps Update PR
+
+    needs:
+      - build-operator
+      - build-api
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Create GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.GITOPS_APP_CLIENT_ID }}
+          private-key: ${{ secrets.GITOPS_APP_PRIVATE_KEY }}
+          owner: anselem-okeke
+          repositories: |
+            ai-platform-gitops
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Clone GitOps repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: anselem-okeke/ai-platform-gitops
+          token: ${{ steps.app-token.outputs.token }}
+          path: ai-platform-gitops
+          ref: main
+          persist-credentials: false
+
+      - name: Update image digests
+        working-directory: ai-platform-gitops
+        env:
+          OPERATOR_DIGEST: ${{ needs.build-operator.outputs.digest }}
+          API_DIGEST: ${{ needs.build-api.outputs.digest }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          OPERATOR_FILE="platform/operator/overlays/dev/kustomization.yaml"
+          API_FILE="platform/api/overlays/dev/kustomization.yaml"
+
+          echo "=== INPUT DIGESTS ==="
+          echo "operator=${OPERATOR_DIGEST}"
+          echo "api=${API_DIGEST}"
+
+          grep -q \
+            'newName: ghcr.io/anselem-okeke/ai-platform-operator' \
+            "$OPERATOR_FILE"
+
+          grep -q \
+            '^[[:space:]]*digest: sha256:' \
+            "$OPERATOR_FILE"
+
+          grep -q \
+            'newName: ghcr.io/anselem-okeke/ai-platform-api' \
+            "$API_FILE"
+
+          grep -q \
+            '^[[:space:]]*digest: sha256:' \
+            "$API_FILE"
+
+          sed -i \
+            "s|^[[:space:]]*digest: sha256:.*|    digest: ${OPERATOR_DIGEST}|" \
+            "$OPERATOR_FILE"
+
+          sed -i \
+            "s|^[[:space:]]*digest: sha256:.*|    digest: ${API_DIGEST}|" \
+            "$API_FILE"
+
+          echo
+          echo "=== OPERATOR OVERLAY ==="
+          cat "$OPERATOR_FILE"
+
+          echo
+          echo "=== API OVERLAY ==="
+          cat "$API_FILE"
+
+      - name: Validate GitOps manifests
+        working-directory: ai-platform-gitops
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          kubectl kustomize \
+            platform/operator/overlays/dev \
+            >/tmp/operator.yaml
+
+          kubectl kustomize \
+            platform/api/overlays/dev \
+            >/tmp/api.yaml
+
+          echo "=== RENDERED OPERATOR IMAGE ==="
+          grep 'image:' /tmp/operator.yaml
+
+          echo
+          echo "=== RENDERED API IMAGE ==="
+          grep 'image:' /tmp/api.yaml
+
+      - name: Verify expected digests rendered
+        working-directory: ai-platform-gitops
+        env:
+          OPERATOR_DIGEST: ${{ needs.build-operator.outputs.digest }}
+          API_DIGEST: ${{ needs.build-api.outputs.digest }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          grep -F \
+            "ghcr.io/anselem-okeke/ai-platform-operator@${OPERATOR_DIGEST}" \
+            /tmp/operator.yaml
+
+          grep -F \
+            "ghcr.io/anselem-okeke/ai-platform-api@${API_DIGEST}" \
+            /tmp/api.yaml
+
+          echo "PASS: expected immutable digests rendered"
+
+      - name: Check for GitOps changes
+        id: changes
+        working-directory: ai-platform-gitops
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if git diff --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "GitOps already references these digests."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "GitOps image update required."
+          fi
+
+      - name: Resolve GitHub App bot identity
+        if: steps.changes.outputs.changed == 'true'
+        id: bot
+        working-directory: ai-platform-gitops
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BOT_ID="$(
+            gh api \
+              "/users/${APP_SLUG}[bot]" \
+              --jq '.id'
+          )"
+
+          echo "id=${BOT_ID}" >> "$GITHUB_OUTPUT"
+
+      - name: Configure Git identity
+        if: steps.changes.outputs.changed == 'true'
+        working-directory: ai-platform-gitops
+        env:
+          BOT_ID: ${{ steps.bot.outputs.id }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config \
+            user.name \
+            "${APP_SLUG}[bot]"
+
+          git config \
+            user.email \
+            "${BOT_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
+
+      - name: Create GitOps branch and commit
+        if: steps.changes.outputs.changed == 'true'
+        working-directory: ai-platform-gitops
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BRANCH="automation/image-${SOURCE_SHA}"
+
+          git checkout -b "$BRANCH"
+
+          git add \
+            platform/operator/overlays/dev/kustomization.yaml \
+            platform/api/overlays/dev/kustomization.yaml
+
+          git diff --cached --check
+
+          echo "=== STAGED CHANGE ==="
+          git diff --cached
+
+          git commit \
+            -m "chore(dev): deploy images from ${SOURCE_SHA}"
+
+          echo "BRANCH=${BRANCH}" >> "$GITHUB_ENV"
+
+      - name: Push GitOps branch
+        if: steps.changes.outputs.changed == 'true'
+        working-directory: ai-platform-gitops
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git remote set-url \
+            origin \
+            "https://x-access-token:${GH_TOKEN}@github.com/anselem-okeke/ai-platform-gitops.git"
+
+          git push \
+            --set-upstream \
+            origin \
+            "$BRANCH"
+
+      - name: Create GitOps pull request
+        if: steps.changes.outputs.changed == 'true'
+        working-directory: ai-platform-gitops
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          SOURCE_SHA: ${{ github.sha }}
+          OPERATOR_DIGEST: ${{ needs.build-operator.outputs.digest }}
+          API_DIGEST: ${{ needs.build-api.outputs.digest }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cat >/tmp/gitops-pr-body.md <<EOF
+          Automated deployment update from:
+
+          \`anselem-okeke/ai-platform-operator@${SOURCE_SHA}\`
+
+          ## Immutable images
+
+          - Operator:
+            \`ghcr.io/anselem-okeke/ai-platform-operator@${OPERATOR_DIGEST}\`
+
+          - API:
+            \`ghcr.io/anselem-okeke/ai-platform-api@${API_DIGEST}\`
+
+          ## Supply-chain gates
+
+          - Go lint
+          - Unit / envtest
+          - govulncheck
+          - Container build
+          - Trivy HIGH/CRITICAL vulnerability gate
+          - SPDX SBOM generation
+          - Provenance attestation
+          - SBOM attestation
+          - Kustomize rendering validation
+
+          After approval and merge, Argo CD will reconcile these immutable digests into the dev cluster.
+          EOF
+
+          gh pr create \
+            --repo anselem-okeke/ai-platform-gitops \
+            --base main \
+            --head "$BRANCH" \
+            --title "chore(dev): deploy images from ${SOURCE_SHA}" \
+            --body-file /tmp/gitops-pr-body.md
