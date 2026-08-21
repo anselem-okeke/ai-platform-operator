@@ -1,0 +1,34 @@
+title = "AI Platform Operator Gitleaks Configuration"
+
+[extend]
+useDefault = true
+
+# Known-safe JDBC URL in Keycloak documentation.
+# Restrict this exception to the generic-api-key rule,
+# the exact documentation file, and the expected line content.
+[[allowlists]]
+description = "Allow documented Keycloak PostgreSQL JDBC URL"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "line"
+paths = [
+  '''^docs/oidc-jwt/02-keycloak-installation\.md$'''
+]
+regexes = [
+  '''jdbc:postgresql://keycloak-postgres:5432/keycloak'''
+]
+
+# Known-safe key fingerprints in the Vault PKI documentation.
+# These are fingerprints/hashes, not private keys.
+[[allowlists]]
+description = "Allow documented certificate key fingerprints"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "line"
+paths = [
+  '''^docs/ai-platform-operator-vault-pki-complete-implementation-guide\.md$'''
+]
+regexes = [
+  '''0578bfdb10074694327e4690233dfed2ec782a6e6ef5db5229af6d391a94f8b7''',
+  '''5bc8b9b2a6c3416e5052aa2d1ef2de8e9c4a5722f8a67ee3293dd7481e025fc7'''
+]
