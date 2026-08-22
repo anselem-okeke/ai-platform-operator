@@ -1,0 +1,8 @@
+# KServe v0.19.0 sklearnserver
+#
+# Exact linux/amd64 upstream manifest:
+# docker.io/kserve/sklearnserver:v0.19.0
+#
+# Do not replace this digest with the mutable v0.19.0 tag.
+
+FROM docker.io/kserve/sklearnserver@sha256:5dccffa1665d18a50c308b4056d1012d36ab988c0bdf51867a5187623d7b688b
