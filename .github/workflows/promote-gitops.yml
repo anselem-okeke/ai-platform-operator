@@ -26,6 +26,12 @@ jobs:
     name: Verify Promotion Gates
     runs-on: ubuntu-latest
 
+    outputs:
+      source_sha: ${{ steps.source.outputs.sha }}
+      platform_changed: ${{ steps.changes.outputs.platform_changed }}
+      runtime_changed: ${{ steps.changes.outputs.runtime_changed }}
+      decision: ${{ steps.gate.outputs.decision }}
+
     # Only evaluate push runs for this repository's main branch.
     if: >
       github.event.workflow_run.event == 'push' &&
@@ -68,6 +74,7 @@ jobs:
           echo "===== CHANGED FILES ====="
           cat /tmp/changed-files.txt
 
+          PLATFORM_CHANGED=false
           RUNTIME_CHANGED=false
 
           while IFS= read -r file; do
@@ -76,13 +83,34 @@ jobs:
               .github/workflows/release-sklearn-runtime.yml)
                 RUNTIME_CHANGED=true
                 ;;
+
+              go.mod|\
+              go.sum|\
+              Dockerfile|\
+              Dockerfile.platform-api|\
+              .dockerignore|\
+              .github/workflows/release-images.yml)
+                PLATFORM_CHANGED=true
+                ;;
+
+              *.go)
+                case "$file" in
+                  *_test.go)
+                    ;;
+                  *)
+                    PLATFORM_CHANGED=true
+                    ;;
+                esac
+                ;;
             esac
           done < /tmp/changed-files.txt
 
+          echo "platform_changed=${PLATFORM_CHANGED}" >> "$GITHUB_OUTPUT"
           echo "runtime_changed=${RUNTIME_CHANGED}" >> "$GITHUB_OUTPUT"
 
           echo
           echo "===== APPLICABILITY ====="
+          echo "platform_changed=${PLATFORM_CHANGED}"
           echo "runtime_changed=${RUNTIME_CHANGED}"
 
       - name: Evaluate workflow results
@@ -92,6 +120,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           SOURCE_SHA: ${{ steps.source.outputs.sha }}
+          PLATFORM_CHANGED: ${{ steps.changes.outputs.platform_changed }}
           RUNTIME_CHANGED: ${{ steps.changes.outputs.runtime_changed }}
         run: |
           set -euo pipefail
@@ -102,13 +131,29 @@ jobs:
             "E2E Tests"
             "Security"
             "Secret Scan"
-            "Release Images"
           )
+
+          if [[ "$PLATFORM_CHANGED" == "true" ]]; then
+            REQUIRED_WORKFLOWS+=(
+              "Release Images"
+            )
+          fi
 
           if [[ "$RUNTIME_CHANGED" == "true" ]]; then
             REQUIRED_WORKFLOWS+=(
               "Release sklearn Runtime"
             )
+          fi
+
+          if [[ "$PLATFORM_CHANGED" != "true" && "$RUNTIME_CHANGED" != "true" ]]; then
+            echo "decision=no-op" >> "$GITHUB_OUTPUT"
+
+            echo "PROMOTION DECISION: NO-OP"
+            echo
+            echo "No deployable artifact domain changed."
+            echo "No promotion action is required."
+
+            exit 0
           fi
 
           RUNS="$(
@@ -119,7 +164,6 @@ jobs:
           )"
 
           echo "===== REQUIRED WORKFLOWS ====="
-
           printf '%s\n' "${REQUIRED_WORKFLOWS[@]}"
 
           echo
@@ -129,7 +173,6 @@ jobs:
           BLOCKED=false
 
           for workflow in "${REQUIRED_WORKFLOWS[@]}"; do
-
             RESULT="$(
               jq -r \
                 --arg workflow "$workflow" \
