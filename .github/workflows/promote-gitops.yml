@@ -1,0 +1,225 @@
+name: Promote to GitOps
+
+on:
+  workflow_run:
+    workflows:
+      - Lint
+      - Tests
+      - E2E Tests
+      - Security
+      - Secret Scan
+      - Release Images
+      - Release sklearn Runtime
+    types:
+      - completed
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: promote-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: true
+
+jobs:
+  verify-promotion-gates:
+    name: Verify Promotion Gates
+    runs-on: ubuntu-latest
+
+    # Only evaluate push runs for this repository's main branch.
+    if: >
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+
+    steps:
+      - name: Capture source commit
+        id: source
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+
+          test -n "$SOURCE_SHA"
+
+          echo "sha=${SOURCE_SHA}" >> "$GITHUB_OUTPUT"
+
+          echo "===== SOURCE COMMIT ====="
+          echo "$SOURCE_SHA"
+
+      - name: Detect changed files
+        id: changes
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+        run: |
+          set -euo pipefail
+
+          gh api \
+            --paginate \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/${GH_REPO}/commits/${SOURCE_SHA}" \
+            --jq '.files[].filename' \
+            > /tmp/changed-files.txt
+
+          echo "===== CHANGED FILES ====="
+          cat /tmp/changed-files.txt
+
+          RUNTIME_CHANGED=false
+
+          while IFS= read -r file; do
+            case "$file" in
+              Dockerfile.sklearn-runtime|\
+              .github/workflows/release-sklearn-runtime.yml)
+                RUNTIME_CHANGED=true
+                ;;
+            esac
+          done < /tmp/changed-files.txt
+
+          echo "runtime_changed=${RUNTIME_CHANGED}" >> "$GITHUB_OUTPUT"
+
+          echo
+          echo "===== APPLICABILITY ====="
+          echo "runtime_changed=${RUNTIME_CHANGED}"
+
+      - name: Evaluate workflow results
+        id: gate
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+          RUNTIME_CHANGED: ${{ steps.changes.outputs.runtime_changed }}
+        run: |
+          set -euo pipefail
+
+          REQUIRED_WORKFLOWS=(
+            "Lint"
+            "Tests"
+            "E2E Tests"
+            "Security"
+            "Secret Scan"
+            "Release Images"
+          )
+
+          if [[ "$RUNTIME_CHANGED" == "true" ]]; then
+            REQUIRED_WORKFLOWS+=(
+              "Release sklearn Runtime"
+            )
+          fi
+
+          RUNS="$(
+            gh api \
+              --paginate \
+              -H "Accept: application/vnd.github+json" \
+              "/repos/${GH_REPO}/actions/runs?head_sha=${SOURCE_SHA}&per_page=100"
+          )"
+
+          echo "===== REQUIRED WORKFLOWS ====="
+
+          printf '%s\n' "${REQUIRED_WORKFLOWS[@]}"
+
+          echo
+          echo "===== RESULTS ====="
+
+          WAITING=false
+          BLOCKED=false
+
+          for workflow in "${REQUIRED_WORKFLOWS[@]}"; do
+
+            RESULT="$(
+              jq -r \
+                --arg workflow "$workflow" \
+                '
+                [
+                  .workflow_runs[]
+                  | select(
+                      .name == $workflow
+                      and .event == "push"
+                      and .head_branch == "main"
+                    )
+                ]
+                | sort_by(.created_at)
+                | reverse
+                | .[0]
+                | if . == null then
+                    "missing"
+                  else
+                    "\(.status):\(.conclusion // "none")"
+                  end
+                ' \
+                <<< "$RUNS"
+            )"
+
+            printf '%-32s %s\n' "${workflow}:" "$RESULT"
+
+            case "$RESULT" in
+              completed:success)
+                ;;
+
+              completed:failure|\
+              completed:cancelled|\
+              completed:timed_out|\
+              completed:action_required|\
+              completed:startup_failure)
+                BLOCKED=true
+                ;;
+
+              *)
+                WAITING=true
+                ;;
+            esac
+          done
+
+          echo
+
+          if [[ "$BLOCKED" == "true" ]]; then
+            echo "decision=blocked" >> "$GITHUB_OUTPUT"
+
+            echo "PROMOTION DECISION: BLOCKED"
+            echo
+            echo "At least one required workflow completed unsuccessfully."
+
+            exit 1
+          fi
+
+          if [[ "$WAITING" == "true" ]]; then
+            echo "decision=waiting" >> "$GITHUB_OUTPUT"
+
+            echo "PROMOTION DECISION: WAITING"
+            echo
+            echo "One or more required workflows are missing or have not completed."
+            echo "No promotion action will occur."
+
+            exit 0
+          fi
+
+          echo "decision=ready" >> "$GITHUB_OUTPUT"
+
+          echo "PROMOTION DECISION: READY"
+          echo
+          echo "PASS: every workflow required for this source commit succeeded."
+
+      - name: Read-only promotion checkpoint
+        if: steps.gate.outputs.decision == 'ready'
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+        run: |
+          set -euo pipefail
+
+          echo "===== READ-ONLY CHECKPOINT ====="
+          echo
+          echo "Source SHA:"
+          echo "$SOURCE_SHA"
+          echo
+          echo "All applicable gates passed."
+          echo
+          echo "GitOps mutation is intentionally NOT implemented yet."
+          echo "No token will be created."
+          echo "No GitOps repository will be cloned."
+          echo "No branch will be pushed."
+          echo "No pull request will be created."
