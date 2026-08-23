@@ -1,4 +1,5 @@
 name: Release Images
+# Builds, scans, attests, and publishes platform images.
 
 on:
   push:
