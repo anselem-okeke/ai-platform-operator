@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"fmt"
+	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -24,6 +25,11 @@ func NewClient() (*Clients, error) {
 			err,
 		)
 	}
+
+	// Bound every Kubernetes API request.
+	// /readyz has a 3s deadline, so the Kubernetes client
+	// should fail before the readiness handler deadline.
+	restConfig.Timeout = 2 * time.Second
 
 	scheme := runtime.NewScheme()
 
