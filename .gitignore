@@ -75,3 +75,5 @@ __pycache__/
 
 # Generated archives
 *.zip
+# Generated upstream runtime source
+.runtime-src/

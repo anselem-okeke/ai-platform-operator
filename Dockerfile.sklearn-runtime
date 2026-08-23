@@ -1,8 +1,179 @@
-# KServe v0.19.0 sklearnserver
-#
-# Exact linux/amd64 upstream manifest:
-# docker.io/kserve/sklearnserver:v0.19.0
-#
-# Do not replace this digest with the mutable v0.19.0 tag.
+ARG PYTHON_VERSION=3.11
+ARG BASE_IMAGE=python:${PYTHON_VERSION}-slim-bookworm
+ARG VENV_PATH=/prod_venv
 
-FROM docker.io/kserve/sklearnserver@sha256:5dccffa1665d18a50c308b4056d1012d36ab988c0bdf51867a5187623d7b688b
+# ============================================================
+# Builder
+# ============================================================
+
+FROM ${BASE_IMAGE} AS builder
+
+ARG VENV_PATH
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+       build-essential \
+       curl \
+       python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Use the same uv generation we observed in the upstream image.
+RUN curl -LsSf https://astral.sh/uv/0.11.21/install.sh | sh \
+    && ln -s /root/.local/bin/uv /usr/local/bin/uv \
+    && uv --version
+
+ENV VIRTUAL_ENV=${VENV_PATH}
+ENV PATH="${VIRTUAL_ENV}/bin:${PATH}"
+ENV UV_HTTP_TIMEOUT=120
+
+RUN uv venv "${VIRTUAL_ENV}"
+
+WORKDIR /workspace/python
+
+# Exact KServe v0.19.0 source prepared by
+# scripts/runtime/fetch-kserve-source.sh and patched by
+# scripts/runtime/patch-kserve-dependencies.py.
+COPY .runtime-src/kserve/python/kserve ./kserve
+COPY .runtime-src/kserve/python/storage ./storage
+COPY .runtime-src/kserve/python/sklearnserver ./sklearnserver
+
+
+# ============================================================
+# KServe dependencies
+# ============================================================
+
+RUN --mount=type=cache,target=/root/.cache/uv \
+    cd kserve \
+    && uv lock \
+       --upgrade-package starlette \
+       --upgrade-package urllib3 \
+       --upgrade-package aiohttp \
+       --upgrade-package cryptography \
+       --upgrade-package python-multipart \
+       --upgrade-package pyjwt \
+       --upgrade-package pyasn1 \
+    && uv sync \
+       --active \
+       --no-dev
+
+
+# ============================================================
+# KServe storage
+# ============================================================
+
+RUN --mount=type=cache,target=/root/.cache/uv \
+    cd storage \
+    && uv pip install .
+
+
+# ============================================================
+# sklearnserver dependencies
+# ============================================================
+
+RUN --mount=type=cache,target=/root/.cache/uv \
+    cd sklearnserver \
+    && uv lock \
+       --upgrade-package starlette \
+       --upgrade-package urllib3 \
+       --upgrade-package aiohttp \
+       --upgrade-package cryptography \
+       --upgrade-package dulwich \
+       --upgrade-package python-multipart \
+       --upgrade-package pyjwt \
+       --upgrade-package pyasn1 \
+    && uv sync \
+       --active \
+       --no-dev
+
+
+# ============================================================
+# Validate the production dependency environment
+# ============================================================
+
+RUN "${VIRTUAL_ENV}/bin/python" - <<'PY'
+from importlib import metadata
+
+packages = [
+    "kserve",
+    "scikit-learn",
+    "PyJWT",
+    "aiohttp",
+    "cryptography",
+    "dulwich",
+    "pyasn1",
+    "python-multipart",
+    "starlette",
+    "urllib3",
+]
+
+print("===== RESOLVED RUNTIME PACKAGES =====")
+
+for package in packages:
+    dist = metadata.distribution(package)
+    print(f"{package}={dist.version}")
+
+print()
+print("===== DEVELOPMENT PACKAGE CHECK =====")
+
+try:
+    metadata.distribution("black")
+except metadata.PackageNotFoundError:
+    print("black=NOT_INSTALLED")
+else:
+    raise SystemExit(
+        "ERROR: black must not exist in the production runtime"
+    )
+PY
+
+
+# ============================================================
+# Final runtime
+# ============================================================
+
+FROM ${BASE_IMAGE} AS prod
+
+ARG VENV_PATH
+
+ENV VIRTUAL_ENV=${VENV_PATH}
+ENV PATH="${VIRTUAL_ENV}/bin:${PATH}"
+ENV PYTHONPATH=/sklearnserver
+
+# The Python base image includes packaging tooling in the global
+# interpreter environment. The serving container does not install
+# packages at runtime, so remove pip/setuptools/wheel and their
+# vendored dependency metadata from the final image.
+#
+# /prod_venv remains isolated and contains the application runtime
+# dependencies copied from the builder stage.
+RUN /usr/local/bin/python -m pip uninstall \
+      --yes \
+      setuptools \
+      wheel \
+      pip
+
+RUN useradd \
+    --create-home \
+    --uid 1000 \
+    --home-dir /home/kserve \
+    kserve
+
+COPY --from=builder \
+    --chown=kserve:kserve \
+    ${VIRTUAL_ENV} \
+    ${VIRTUAL_ENV}
+
+COPY --from=builder \
+    /workspace/python/kserve \
+    /kserve
+
+COPY --from=builder \
+    /workspace/python/storage \
+    /storage
+
+COPY --from=builder \
+    /workspace/python/sklearnserver \
+    /sklearnserver
+
+USER 1000
+
+ENTRYPOINT ["python", "-m", "sklearnserver"]
