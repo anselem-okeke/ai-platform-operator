@@ -1,5 +1,6 @@
 name: Release Images
 # Builds, scans, attests, and publishes platform images.
+# Promotion is handled only by the centralized promotion workflow.
 
 on:
   push:
