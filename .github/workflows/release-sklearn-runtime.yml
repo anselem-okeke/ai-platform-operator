@@ -1,11 +1,21 @@
 name: Release sklearn Runtime
 
 on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - Dockerfile.sklearn-runtime
+      - .dockerignore
+      - scripts/runtime/**
+      - .github/workflows/release-sklearn-runtime.yml
+
   push:
     branches:
       - main
     paths:
       - Dockerfile.sklearn-runtime
+      - .dockerignore
       - scripts/runtime/**
       - .github/workflows/release-sklearn-runtime.yml
 
@@ -138,6 +148,7 @@ jobs:
           output-file: sklearn-runtime-sbom.spdx.json
 
       - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ${{ env.REGISTRY }}
@@ -145,6 +156,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push runtime
+        if: github.event_name != 'pull_request'
         id: build
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a
         with:
@@ -157,6 +169,7 @@ jobs:
           cache-from: type=gha
 
       - name: Generate runtime provenance
+        if: github.event_name != 'pull_request'
         uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
         with:
           subject-name: ${{ steps.meta.outputs.image }}
@@ -164,6 +177,7 @@ jobs:
           push-to-registry: true
 
       - name: Attest runtime SBOM
+        if: github.event_name != 'pull_request'
         uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
         with:
           subject-name: ${{ steps.meta.outputs.image }}
@@ -173,6 +187,7 @@ jobs:
           push-to-registry: true
 
       - name: Print immutable runtime reference
+        if: github.event_name != 'pull_request'
         shell: bash
         env:
           IMAGE: ${{ steps.meta.outputs.image }}
