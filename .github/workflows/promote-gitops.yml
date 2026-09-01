@@ -10,6 +10,7 @@ on:
       - Secret Scan
       - Release Images
       - Release sklearn Runtime
+      - Release storage initializer
     types:
       - completed
 
@@ -30,6 +31,7 @@ jobs:
       source_sha: ${{ steps.source.outputs.sha }}
       platform_changed: ${{ steps.changes.outputs.platform_changed }}
       runtime_changed: ${{ steps.changes.outputs.runtime_changed }}
+      storage_initializer_changed: ${{ steps.changes.outputs.storage_initializer_changed }}
       decision: ${{ steps.gate.outputs.decision }}
 
     # Only evaluate push runs for this repository's main branch.
@@ -76,12 +78,18 @@ jobs:
 
           PLATFORM_CHANGED=false
           RUNTIME_CHANGED=false
+          STORAGE_INITIALIZER_CHANGED=false
 
           while IFS= read -r file; do
             case "$file" in
               Dockerfile.sklearn-runtime|\
               .github/workflows/release-sklearn-runtime.yml)
                 RUNTIME_CHANGED=true
+                ;;
+
+              Dockerfile.storage-initializer|\
+              .github/workflows/release-storage-initializer.yml)
+                STORAGE_INITIALIZER_CHANGED=true
                 ;;
 
               go.mod|\
@@ -107,6 +115,7 @@ jobs:
 
           echo "platform_changed=${PLATFORM_CHANGED}" >> "$GITHUB_OUTPUT"
           echo "runtime_changed=${RUNTIME_CHANGED}" >> "$GITHUB_OUTPUT"
+          echo "storage_initializer_changed=${STORAGE_INITIALIZER_CHANGED}" >> "$GITHUB_OUTPUT"
 
           echo
           echo "===== APPLICABILITY ====="
@@ -122,6 +131,7 @@ jobs:
           SOURCE_SHA: ${{ steps.source.outputs.sha }}
           PLATFORM_CHANGED: ${{ steps.changes.outputs.platform_changed }}
           RUNTIME_CHANGED: ${{ steps.changes.outputs.runtime_changed }}
+          STORAGE_INITIALIZER_CHANGED: ${{ steps.changes.outputs.storage_initializer_changed }}
         run: |
           set -euo pipefail
 
@@ -145,7 +155,13 @@ jobs:
             )
           fi
 
-          if [[ "$PLATFORM_CHANGED" != "true" && "$RUNTIME_CHANGED" != "true" ]]; then
+          if [[ "$STORAGE_INITIALIZER_CHANGED" == "true" ]]; then
+            REQUIRED_WORKFLOWS+=(
+              "Release storage initializer"
+            )
+          fi
+
+          if [[ "$PLATFORM_CHANGED" != "true" && "$RUNTIME_CHANGED" != "true" && "$STORAGE_INITIALIZER_CHANGED" != "true" ]]; then
             echo "decision=no-op" >> "$GITHUB_OUTPUT"
 
             echo "PROMOTION DECISION: NO-OP"
