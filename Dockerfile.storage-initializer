@@ -1,0 +1,17 @@
+# Trusted KServe v0.19.0 storage initializer.
+#
+# Upstream image:
+#   kserve/storage-initializer:v0.19.0
+#
+# Upstream OCI index:
+#   sha256:c354cba1da45957dd4008df8632aa31749253516f132bb5128f0b59cbabfb03b
+#
+# Pinned linux/amd64 manifest:
+#   sha256:19ad4c6135d42ae0ab9bb66f6c72e0e37a428dbe64ee7493e24658f9d7de59d2
+#
+# This image intentionally does not modify the upstream filesystem,
+# entrypoint, user, or runtime behavior. It republishes the exact
+# upstream implementation through the AI Platform software
+# supply-chain controls.
+
+FROM kserve/storage-initializer@sha256:19ad4c6135d42ae0ab9bb66f6c72e0e37a428dbe64ee7493e24658f9d7de59d2
