@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - Dockerfile.storage-initializer
+      - scripts/runtime/**
       - .github/workflows/release-storage-initializer.yml
 
   push:
@@ -13,6 +14,7 @@ on:
       - main
     paths:
       - Dockerfile.storage-initializer
+      - scripts/runtime/**
       - .github/workflows/release-storage-initializer.yml
 
   workflow_dispatch:
@@ -42,6 +44,45 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
+
+      - name: Fetch pinned KServe source
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ./scripts/runtime/fetch-kserve-source.sh
+
+      - name: Apply hardened storage dependency policy
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 scripts/runtime/patch-kserve-dependencies.py
+
+      - name: Verify prepared KServe storage source
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          EXPECTED_COMMIT="b0eda63d2c105479140af8ec9149d992b7e44be5"
+
+          ACTUAL_COMMIT="$(
+            cat .runtime-src/kserve/.ai-platform-upstream-commit
+          )"
+
+          test "$ACTUAL_COMMIT" = "$EXPECTED_COMMIT"
+
+          STORAGE_PROJECT=".runtime-src/kserve/python/storage/pyproject.toml"
+
+          grep -F '"aiohttp<4.0.0,>=3.14.3"' "$STORAGE_PROJECT"
+          grep -F '"dulwich>=1.2.5"' "$STORAGE_PROJECT"
+          grep -F '"cryptography>=50.0.0"' "$STORAGE_PROJECT"
+          grep -F '"pyjwt>=2.13.0"' "$STORAGE_PROJECT"
+          grep -F '"pyasn1>=0.6.4"' "$STORAGE_PROJECT"
+          grep -F '"urllib3>=2.7.0"' "$STORAGE_PROJECT"
+          grep -F '"protobuf>=6.33.5"' "$STORAGE_PROJECT"
+
+          echo "Prepared KServe storage source verified."
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0

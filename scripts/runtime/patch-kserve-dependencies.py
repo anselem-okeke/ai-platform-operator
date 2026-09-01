@@ -130,6 +130,25 @@ replace(
 )
 
 
+
+
+# ------------------------------------------------------------
+# KServe storage transitive security floors
+#
+# These packages are pulled transitively by the cloud-storage
+# SDKs. Declare explicit floors so a fresh lock cannot resolve
+# vulnerable versions.
+# ------------------------------------------------------------
+
+replace(
+    storage,
+    '    "azure-core>=1.38.0"\n]',
+    '    "azure-core>=1.38.0",\n'
+    '    "urllib3>=2.7.0",\n'
+    '    "protobuf>=6.33.5"\n'
+    ']',
+)
+
 print(
     "Patched KServe runtime dependency policy in:",
     ROOT,
