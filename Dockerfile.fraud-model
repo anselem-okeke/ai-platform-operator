@@ -1,0 +1,5 @@
+FROM nginxinc/nginx-unprivileged:1.31-alpine@sha256:2ddec616f1cb58bcac057aa388f28cb81e35137641ef4226d321714499329bd1
+
+LABEL org.opencontainers.image.title="AI Platform fraud-model compatibility service"
+LABEL org.opencontainers.image.description="Trusted nginx-based compatibility workload for the Deployment ModelService backend"
+LABEL org.opencontainers.image.source="https://github.com/anselem-okeke/ai-platform-operator"
