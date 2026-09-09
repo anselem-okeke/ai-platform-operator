@@ -234,12 +234,58 @@ type ModelServiceExposure struct {
 	GatewayDataPlaneNamespace string `json:"gatewayDataPlaneNamespace,omitempty"`
 }
 
+// ModelServiceBackend identifies the serving implementation.
+type ModelServiceBackend string
+
+const (
+	// ModelServiceBackendDeployment uses the existing native path.
+	ModelServiceBackendDeployment ModelServiceBackend = "Deployment"
+
+	// ModelServiceBackendKServe delegates serving to KServe.
+	ModelServiceBackendKServe ModelServiceBackend = "KServe"
+)
+
+// ModelServiceModelFormat identifies the serialized model format.
+type ModelServiceModelFormat struct {
+	// +kubebuilder:validation:Enum=sklearn
+	Name string `json:"name"`
+
+	// +kubebuilder:default="1"
+	// +kubebuilder:validation:Pattern=^1$
+	Version string `json:"version,omitempty"`
+}
+
+// ModelServicePredictor defines the requested KServe predictor.
+type ModelServicePredictor struct {
+	ModelFormat ModelServiceModelFormat `json:"modelFormat"`
+
+	// +kubebuilder:default="kserve-sklearnserver"
+	// +kubebuilder:validation:Enum=kserve-sklearnserver
+	Runtime string `json:"runtime,omitempty"`
+
+	// +kubebuilder:validation:Pattern=`^s3://[^/]+/.+`
+	StorageURI string `json:"storageUri"`
+
+	// +kubebuilder:default="kserve-model-reader"
+	// +kubebuilder:validation:Enum=kserve-model-reader
+	ServiceAccountName string `json:"serviceAccountName,omitempty"`
+}
+
 // ModelServiceSpec defines the desired state of ModelService.
+// +kubebuilder:validation:XValidation:rule="self.backend == 'KServe' ? has(self.predictor) : size(self.image) > 0",message="spec.predictor is required for KServe and spec.image is required for Deployment"
+// +kubebuilder:validation:XValidation:rule="self.backend == 'KServe' || !has(self.predictor)",message="spec.predictor may only be configured for KServe"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.backend) || self.backend == oldSelf.backend",message="spec.backend is immutable"
 type ModelServiceSpec struct {
-	// Image is the container image used to run the model service.
+	// Backend selects the serving implementation.
+	// Existing ModelServices use the Deployment backend.
+	// +kubebuilder:default=Deployment
+	// +kubebuilder:validation:Enum=Deployment;KServe
+	Backend ModelServiceBackend `json:"backend,omitempty"`
+
+	// Image is the container image used by the Deployment backend.
 	// Example: ghcr.io/anselem-okeke/fraud-model:v1
 	// +kubebuilder:validation:MinLength=1
-	Image string `json:"image"`
+	Image string `json:"image,omitempty"`
 
 	// Replicas is the desired number of model-serving pods.
 	// +kubebuilder:default=1
@@ -297,6 +343,11 @@ type ModelServiceSpec struct {
 	// Storage contains persistent-storage configuration.
 	// +optional
 	Storage *ModelServiceStorage `json:"storage,omitempty"`
+
+	// Predictor contains KServe model-serving configuration.
+	// It is required when backend is KServe.
+	// +optional
+	Predictor *ModelServicePredictor `json:"predictor,omitempty"`
 }
 
 // ModelServiceStatus defines the observed state of ModelService.
@@ -325,6 +376,7 @@ type ModelServiceStatus struct {
 // +kubebuilder:resource:shortName=ms
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
 // +kubebuilder:printcolumn:name="Ready",type=integer,JSONPath=`.status.readyReplicas`
+// +kubebuilder:printcolumn:name="Backend",type=string,JSONPath=`.spec.backend`
 // +kubebuilder:printcolumn:name="Image",type=string,JSONPath=`.spec.image`
 // +kubebuilder:printcolumn:name="Endpoint",type=string,JSONPath=`.status.endpoint`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`

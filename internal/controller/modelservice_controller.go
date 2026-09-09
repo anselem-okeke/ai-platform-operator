@@ -67,6 +67,10 @@ const (
 	defaultProgressDeadlineSeconds       = int32(600)
 	defaultMaxUnavailable                = "0"
 	defaultMaxSurge                      = "1"
+
+	modelServicePhaseProvisioning = "Provisioning"
+	modelServicePhaseReady        = "Ready"
+	modelServicePhaseFailed       = "Failed"
 )
 
 // ModelServiceReconciler reconciles a ModelService object.
@@ -112,6 +116,11 @@ type ModelServiceReconciler struct {
 //
 // +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=httproutes,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=httproutes/status,verbs=get
+// Permissions for owned KServe InferenceServices.
+//
+// +kubebuilder:rbac:groups=serving.kserve.io,resources=inferenceservices,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=serving.kserve.io,resources=inferenceservices/status,verbs=get
+//
 // Reconcile moves the current cluster state toward the desired state declared
 // by a ModelService.
 
@@ -131,6 +140,15 @@ func (r *ModelServiceReconciler) Reconcile(
 		}
 
 		return ctrl.Result{}, err
+	}
+
+	if backendForModelService(modelService) ==
+		platformv1alpha1.ModelServiceBackendKServe {
+
+		return r.reconcileKServeModelService(
+			ctx,
+			modelService,
+		)
 	}
 
 	labels := labelsForModelService(modelService)
@@ -1215,7 +1233,7 @@ func (r *ModelServiceReconciler) updateModelServiceStatus(
 		readyReplicas == desiredReplicas &&
 		deployment.Status.AvailableReplicas == desiredReplicas:
 
-		modelService.Status.Phase = "Ready"
+		modelService.Status.Phase = modelServicePhaseReady
 
 		setModelServiceCondition(
 			modelService,
@@ -1225,7 +1243,7 @@ func (r *ModelServiceReconciler) updateModelServiceStatus(
 		)
 
 	default:
-		modelService.Status.Phase = "Provisioning"
+		modelService.Status.Phase = modelServicePhaseProvisioning
 
 		message := fmt.Sprintf(
 			"Waiting for ready replicas: %d of %d ready",
@@ -1681,6 +1699,7 @@ func (r *ModelServiceReconciler) SetupWithManager(
 		Owns(&policyv1.PodDisruptionBudget{}).
 		Owns(&networkingv1.NetworkPolicy{}).
 		Owns(&gatewayv1.HTTPRoute{}).
+		Owns(newInferenceService("", "")).
 		Named("modelservice").
 		Complete(r)
 }
