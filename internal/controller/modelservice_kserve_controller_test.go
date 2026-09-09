@@ -328,6 +328,16 @@ var _ = Describe("ModelService KServe reconciliation", func() {
 					map[string]any{
 						"type":    "Ready",
 						"status":  "False",
+						"reason":  "Predictor Deployment NotReady",
+						"message": "Predictor HTTPRoute not created",
+					},
+				},
+				"modelStatus": map[string]any{
+					"states": map[string]any{
+						"targetModelState": "FailedToLoad",
+					},
+					"transitionStatus": "BlockedByFailedLoad",
+					"lastFailureInfo": map[string]any{
 						"reason":  "ModelLoadFailed",
 						"message": "model artifact could not be loaded",
 					},
