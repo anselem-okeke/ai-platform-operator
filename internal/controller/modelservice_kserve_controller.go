@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strings"
 
 	platformv1alpha1 "github.com/anselem-okeke/ai-platform-operator/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -279,55 +280,58 @@ func (r *ModelServiceReconciler) updateModelServiceStatusFromInferenceService(
 		modelService.Status.Phase = modelServicePhaseReady
 		modelService.Status.ReadyReplicas = replicas
 
-		if reason == "" {
-			reason = "InferenceServiceReady"
-		}
-
-		if message == "" {
-			message = "KServe InferenceService is ready"
-		}
-
 		setModelServiceCondition(
 			modelService,
 			metav1.ConditionTrue,
-			reason,
-			message,
+			"InferenceServiceReady",
+			kserveConditionMessage(
+				reason,
+				message,
+				"KServe InferenceService is ready",
+			),
 		)
 
-	case readyStatus == metav1.ConditionFalse:
+	case readyStatus == metav1.ConditionFalse &&
+		kserveConditionFailed(reason):
 		modelService.Status.Phase = modelServicePhaseFailed
-
-		if reason == "" {
-			reason = "InferenceServiceNotReady"
-		}
-
-		if message == "" {
-			message = "KServe InferenceService is not ready"
-		}
 
 		setModelServiceCondition(
 			modelService,
 			metav1.ConditionFalse,
-			reason,
-			message,
+			"InferenceServiceFailed",
+			kserveConditionMessage(
+				reason,
+				message,
+				"KServe InferenceService failed",
+			),
+		)
+
+	case readyStatus == metav1.ConditionFalse:
+		modelService.Status.Phase = modelServicePhaseProvisioning
+
+		setModelServiceCondition(
+			modelService,
+			metav1.ConditionFalse,
+			"InferenceServiceNotReady",
+			kserveConditionMessage(
+				reason,
+				message,
+				"KServe InferenceService is not ready",
+			),
 		)
 
 	default:
 		modelService.Status.Phase = modelServicePhaseProvisioning
 
-		if reason == "" {
-			reason = "InferenceServiceProgressing"
-		}
-
-		if message == "" {
-			message = "KServe InferenceService is progressing"
-		}
-
 		setModelServiceCondition(
 			modelService,
 			metav1.ConditionFalse,
-			reason,
-			message,
+			"InferenceServiceProgressing",
+			kserveConditionMessage(
+				reason,
+				message,
+				"KServe InferenceService is progressing",
+			),
 		)
 	}
 
@@ -336,6 +340,35 @@ func (r *ModelServiceReconciler) updateModelServiceStatusFromInferenceService(
 	}
 
 	return r.Status().Update(ctx, modelService)
+}
+
+// kserveConditionFailed identifies explicit KServe failure reasons.
+// Other Ready=False conditions are treated as normal provisioning.
+func kserveConditionFailed(reason string) bool {
+	normalized := strings.ToLower(reason)
+
+	return strings.Contains(normalized, "failed") ||
+		strings.Contains(normalized, "error") ||
+		strings.Contains(normalized, "invalid")
+}
+
+// kserveConditionMessage preserves KServe's diagnostic details while the
+// platform publishes a stable Kubernetes-compatible condition reason.
+func kserveConditionMessage(
+	reason string,
+	message string,
+	fallback string,
+) string {
+	switch {
+	case reason != "" && message != "":
+		return fmt.Sprintf("%s: %s", reason, message)
+	case message != "":
+		return message
+	case reason != "":
+		return reason
+	default:
+		return fallback
+	}
 }
 
 // inferenceServiceReadyCondition returns KServe's top-level Ready condition.

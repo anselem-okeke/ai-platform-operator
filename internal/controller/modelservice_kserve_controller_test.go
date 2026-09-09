@@ -279,6 +279,55 @@ var _ = Describe("ModelService KServe reconciliation", func() {
 					map[string]any{
 						"type":    "Ready",
 						"status":  "False",
+						"reason":  "Predictor Deployment NotReady",
+						"message": "Predictor HTTPRoute not created",
+					},
+				},
+			}
+
+		Expect(k8sClient.Status().Update(
+			ctx,
+			inferenceService,
+		)).To(Succeed())
+
+		reconcileResource()
+
+		Expect(k8sClient.Get(
+			ctx,
+			key,
+			modelService,
+		)).To(Succeed())
+
+		Expect(modelService.Status.Phase).
+			To(Equal("Provisioning"))
+
+		available = meta.FindStatusCondition(
+			modelService.Status.Conditions,
+			"Available",
+		)
+		Expect(available).NotTo(BeNil())
+		Expect(available.Status).
+			To(Equal(metav1.ConditionFalse))
+		Expect(available.Reason).
+			To(Equal("InferenceServiceNotReady"))
+		Expect(available.Message).
+			To(Equal(
+				"Predictor Deployment NotReady: " +
+					"Predictor HTTPRoute not created",
+			))
+
+		Expect(k8sClient.Get(
+			ctx,
+			key,
+			inferenceService,
+		)).To(Succeed())
+
+		inferenceService.Object["status"] =
+			map[string]any{
+				"conditions": []any{
+					map[string]any{
+						"type":    "Ready",
+						"status":  "False",
 						"reason":  "ModelLoadFailed",
 						"message": "model artifact could not be loaded",
 					},
@@ -309,7 +358,12 @@ var _ = Describe("ModelService KServe reconciliation", func() {
 		Expect(available.Status).
 			To(Equal(metav1.ConditionFalse))
 		Expect(available.Reason).
-			To(Equal("ModelLoadFailed"))
+			To(Equal("InferenceServiceFailed"))
+		Expect(available.Message).
+			To(Equal(
+				"ModelLoadFailed: " +
+					"model artifact could not be loaded",
+			))
 	})
 
 	It("reconciles specification updates and child drift", func() {
