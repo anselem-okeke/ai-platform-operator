@@ -266,7 +266,27 @@ func (r *ModelServiceReconciler) updateModelServiceStatusFromInferenceService(
 		return err
 	}
 
+	failureReason, failureMessage, modelFailed, err :=
+		inferenceServiceModelFailure(inferenceService)
+	if err != nil {
+		return err
+	}
+
 	switch {
+	case modelFailed:
+		modelService.Status.Phase = modelServicePhaseFailed
+
+		setModelServiceCondition(
+			modelService,
+			metav1.ConditionFalse,
+			"InferenceServiceFailed",
+			kserveConditionMessage(
+				failureReason,
+				failureMessage,
+				"KServe model failed to load",
+			),
+		)
+
 	case !found:
 		modelService.Status.Phase = modelServicePhaseProvisioning
 		setModelServiceCondition(
@@ -340,6 +360,75 @@ func (r *ModelServiceReconciler) updateModelServiceStatusFromInferenceService(
 	}
 
 	return r.Status().Update(ctx, modelService)
+}
+
+// inferenceServiceModelFailure returns KServe's active model-load
+// failure. Failure details are considered active only while the target
+// model state or transition status reports a blocked failed load.
+func inferenceServiceModelFailure(
+	inferenceService *unstructured.Unstructured,
+) (string, string, bool, error) {
+	targetState, _, err := unstructured.NestedString(
+		inferenceService.Object,
+		"status",
+		"modelStatus",
+		"states",
+		"targetModelState",
+	)
+	if err != nil {
+		return "", "", false, fmt.Errorf(
+			"read KServe target model state: %w",
+			err,
+		)
+	}
+
+	transitionStatus, _, err := unstructured.NestedString(
+		inferenceService.Object,
+		"status",
+		"modelStatus",
+		"transitionStatus",
+	)
+	if err != nil {
+		return "", "", false, fmt.Errorf(
+			"read KServe model transition status: %w",
+			err,
+		)
+	}
+
+	if targetState != "FailedToLoad" &&
+		transitionStatus != "BlockedByFailedLoad" {
+		return "", "", false, nil
+	}
+
+	reason, _, err := unstructured.NestedString(
+		inferenceService.Object,
+		"status",
+		"modelStatus",
+		"lastFailureInfo",
+		"reason",
+	)
+	if err != nil {
+		return "", "", false, fmt.Errorf(
+			"read KServe model failure reason: %w",
+			err,
+		)
+	}
+
+	message, _, err := unstructured.NestedString(
+		inferenceService.Object,
+		"status",
+		"modelStatus",
+		"lastFailureInfo",
+		"message",
+	)
+	if err != nil {
+		return "", "", false, fmt.Errorf(
+			"read KServe model failure message: %w",
+			err,
+		)
+	}
+
+	return reason, strings.TrimSpace(message), true, nil
 }
 
 // kserveConditionFailed identifies explicit KServe failure reasons.
