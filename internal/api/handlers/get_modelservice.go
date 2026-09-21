@@ -140,15 +140,42 @@ func (h *GetModelServiceHandler) ServeHTTP(
 func modelServiceToResponse(
 	modelService platformv1alpha1.ModelService,
 ) response.ModelServiceResponse {
+	backend := normalizedModelServiceBackend(
+		modelService.Spec.Backend,
+	)
+
 	result := response.ModelServiceResponse{
 		APIVersion: "v1",
 		Kind:       "ModelService",
 		Name:       modelService.Name,
-		Image:      modelService.Spec.Image,
+		Backend:    backend,
 		Replicas:   modelService.Spec.Replicas,
-		Port:       modelService.Spec.Port,
 		State:      modelServiceState(modelService),
 		Generation: modelService.Generation,
+	}
+
+	if backend == string(
+		platformv1alpha1.ModelServiceBackendDeployment,
+	) {
+		result.Image = modelService.Spec.Image
+		result.Port = modelService.Spec.Port
+	}
+
+	if modelService.Spec.Predictor != nil {
+		result.Predictor =
+			&response.ModelServicePredictor{
+				ModelFormat: response.ModelServiceModelFormat{
+					Name: modelService.Spec.Predictor.
+						ModelFormat.Name,
+					Version: modelService.Spec.Predictor.
+						ModelFormat.Version,
+				},
+				Runtime: modelService.Spec.Predictor.Runtime,
+				StorageURI: modelService.Spec.Predictor.
+					StorageURI,
+				ServiceAccountName: modelService.Spec.Predictor.
+					ServiceAccountName,
+			}
 	}
 
 	if modelService.Spec.Exposure != nil {
@@ -178,4 +205,17 @@ func modelServiceToResponse(
 	}
 
 	return result
+}
+
+func normalizedModelServiceBackend(
+	backend platformv1alpha1.ModelServiceBackend,
+) string {
+	if backend == "" {
+		return string(
+			platformv1alpha1.
+				ModelServiceBackendDeployment,
+		)
+	}
+
+	return string(backend)
 }

@@ -8,7 +8,10 @@ import (
 	"testing"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	platformv1alpha1 "github.com/anselem-okeke/ai-platform-operator/api/v1alpha1"
 )
 
 func newUpdateRequest(
@@ -165,6 +168,210 @@ func TestUpdateModelService(
 				body,
 			)
 		}
+	}
+}
+
+func TestUpdateKServeModelServicePreservesBackend(
+	t *testing.T,
+) {
+	original := &platformv1alpha1.ModelService{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "iris-api",
+			Namespace:  "ai-platform",
+			Generation: 2,
+		},
+		Spec: platformv1alpha1.ModelServiceSpec{
+			Backend: platformv1alpha1.
+				ModelServiceBackendKServe,
+			Replicas: 1,
+			Predictor: &platformv1alpha1.
+				ModelServicePredictor{
+				ModelFormat: platformv1alpha1.
+					ModelServiceModelFormat{
+					Name:    "sklearn",
+					Version: "1",
+				},
+				Runtime:            "kserve-sklearnserver",
+				StorageURI:         "s3://models/sklearn/iris/v1",
+				ServiceAccountName: "kserve-model-reader",
+			},
+		},
+	}
+
+	store := &fakeModelServiceUpdateStore{
+		item: original,
+	}
+
+	handler :=
+		NewUpdateModelServiceHandler(
+			testLogger(),
+			store,
+			10,
+			testPatchDefaults(),
+		)
+
+	request := newUpdateRequest(`
+{
+  "replicas": 2,
+  "predictor": {
+    "modelFormat": {
+      "name": "sklearn",
+      "version": "1"
+    },
+    "runtime": "kserve-sklearnserver",
+    "storageUri": "s3://models/sklearn/iris/v2",
+    "serviceAccountName": "kserve-model-reader"
+  }
+}
+`)
+
+	recorder := httptest.NewRecorder()
+
+	handler.ServeHTTP(
+		recorder,
+		request,
+	)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf(
+			"expected status %d, got %d: %s",
+			http.StatusOK,
+			recorder.Code,
+			recorder.Body.String(),
+		)
+	}
+
+	if store.updated == nil {
+		t.Fatal(
+			"expected KServe ModelService update",
+		)
+	}
+
+	if store.updated.Spec.Backend !=
+		platformv1alpha1.ModelServiceBackendKServe {
+		t.Fatalf(
+			"expected backend KServe, got %q",
+			store.updated.Spec.Backend,
+		)
+	}
+
+	if store.updated.Spec.Replicas != 2 {
+		t.Fatalf(
+			"expected replicas 2, got %d",
+			store.updated.Spec.Replicas,
+		)
+	}
+
+	if store.updated.Spec.Predictor == nil {
+		t.Fatal(
+			"expected predictor to be preserved",
+		)
+	}
+
+	if store.updated.Spec.Predictor.StorageURI !=
+		"s3://models/sklearn/iris/v2" {
+		t.Fatalf(
+			"unexpected storage URI %q",
+			store.updated.Spec.Predictor.StorageURI,
+		)
+	}
+
+	body := recorder.Body.String()
+
+	if !strings.Contains(
+		body,
+		`"backend":"KServe"`,
+	) {
+		t.Fatalf(
+			"expected KServe backend in response, got %s",
+			body,
+		)
+	}
+
+	if !strings.Contains(
+		body,
+		`"storageUri":"s3://models/sklearn/iris/v2"`,
+	) {
+		t.Fatalf(
+			"expected updated predictor in response, got %s",
+			body,
+		)
+	}
+}
+
+func TestUpdateModelServiceRejectsBackendChange(
+	t *testing.T,
+) {
+	store := &fakeModelServiceUpdateStore{
+		item: testPatchModelService(),
+	}
+
+	handler :=
+		NewUpdateModelServiceHandler(
+			testLogger(),
+			store,
+			10,
+			testPatchDefaults(),
+		)
+
+	request := newUpdateRequest(`
+{
+  "backend": "KServe",
+  "replicas": 1,
+  "predictor": {
+    "modelFormat": {
+      "name": "sklearn",
+      "version": "1"
+    },
+    "runtime": "kserve-sklearnserver",
+    "storageUri": "s3://models/sklearn/iris/v1",
+    "serviceAccountName": "kserve-model-reader"
+  }
+}
+`)
+
+	recorder := httptest.NewRecorder()
+
+	handler.ServeHTTP(
+		recorder,
+		request,
+	)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf(
+			"expected status %d, got %d: %s",
+			http.StatusBadRequest,
+			recorder.Code,
+			recorder.Body.String(),
+		)
+	}
+
+	body := recorder.Body.String()
+
+	if !strings.Contains(
+		body,
+		`"code":"VALIDATION_FAILED"`,
+	) {
+		t.Fatalf(
+			"unexpected response: %s",
+			body,
+		)
+	}
+
+	if !strings.Contains(
+		body,
+		`"field":"backend"`,
+	) {
+		t.Fatalf(
+			"expected backend validation detail, got %s",
+			body,
+		)
+	}
+
+	if store.updated != nil {
+		t.Fatal(
+			"expected backend change not to be persisted",
+		)
 	}
 }
 

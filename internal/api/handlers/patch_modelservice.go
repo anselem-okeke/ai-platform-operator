@@ -185,6 +185,110 @@ func (h *PatchModelServiceHandler) ServeHTTP(
 		return
 	}
 
+	existingBackend := modelService.Spec.Backend
+
+	if existingBackend == "" {
+		existingBackend = platformv1alpha1.
+			ModelServiceBackendDeployment
+	}
+
+	if request.Backend != nil &&
+		*request.Backend != string(existingBackend) {
+		response.WriteJSON(
+			w,
+			http.StatusBadRequest,
+			response.APIError{
+				Error: response.ErrorBody{
+					Code:    codeValidationFailed,
+					Message: messageRequestValidationFailed,
+					RequestID: middleware.
+						RequestIDFromContext(
+							r.Context(),
+						),
+					Details: []response.ValidationDetail{
+						{
+							Field: "backend",
+							Message: "is immutable and " +
+								"must remain " +
+								string(existingBackend),
+						},
+					},
+				},
+			},
+		)
+
+		return
+	}
+
+	var patchBackendDetails []response.ValidationDetail
+
+	if existingBackend ==
+		platformv1alpha1.ModelServiceBackendKServe {
+		if request.Image != nil {
+			patchBackendDetails = append(
+				patchBackendDetails,
+				response.ValidationDetail{
+					Field: "image",
+					Message: "may not be patched " +
+						"for KServe",
+				},
+			)
+		}
+
+		if request.Port != nil {
+			patchBackendDetails = append(
+				patchBackendDetails,
+				response.ValidationDetail{
+					Field: "port",
+					Message: "may not be patched " +
+						"for KServe",
+				},
+			)
+		}
+
+		if request.Exposure != nil {
+			patchBackendDetails = append(
+				patchBackendDetails,
+				response.ValidationDetail{
+					Field: "exposure",
+					Message: "may not be patched " +
+						"for KServe",
+				},
+			)
+		}
+
+		if request.Storage != nil {
+			patchBackendDetails = append(
+				patchBackendDetails,
+				response.ValidationDetail{
+					Field: "storage",
+					Message: "may not be patched " +
+						"for KServe",
+				},
+			)
+		}
+	}
+
+	if len(patchBackendDetails) > 0 {
+		response.WriteJSON(
+			w,
+			http.StatusBadRequest,
+			response.APIError{
+				Error: response.ErrorBody{
+					Code:    codeValidationFailed,
+					Message: messageRequestValidationFailed,
+					RequestID: middleware.
+						RequestIDFromContext(
+							r.Context(),
+						),
+					Details: patchBackendDetails,
+				},
+			},
+		)
+
+		return
+	}
+
 	candidate := modelService.DeepCopy()
 
 	applyPatchRequest(
@@ -276,9 +380,11 @@ func (h *PatchModelServiceHandler) ServeHTTP(
 func hasPatchFields(
 	request apirequest.PatchModelServiceRequest,
 ) bool {
-	return request.Image != nil ||
+	return request.Backend != nil ||
+		request.Image != nil ||
 		request.Replicas != nil ||
 		request.Port != nil ||
+		request.Predictor != nil ||
 		request.Exposure != nil ||
 		request.Storage != nil
 }
@@ -288,6 +394,20 @@ func applyPatchRequest(
 	request apirequest.PatchModelServiceRequest,
 	defaults ModelServiceDefaults,
 ) {
+	if request.Backend != nil {
+		modelService.Spec.Backend =
+			platformv1alpha1.ModelServiceBackend(
+				*request.Backend,
+			)
+	}
+
+	if request.Predictor != nil {
+		modelService.Spec.Predictor =
+			requestPredictorToModelService(
+				request.Predictor,
+			)
+	}
+
 	if request.Image != nil {
 		modelService.Spec.Image =
 			*request.Image
@@ -410,28 +530,64 @@ func applyStoragePatch(
 func modelServiceToUpdateRequest(
 	modelService *platformv1alpha1.ModelService,
 ) apirequest.UpdateModelServiceRequest {
+	backend := modelService.Spec.Backend
+
+	if backend == "" {
+		backend = platformv1alpha1.
+			ModelServiceBackendDeployment
+	}
+
 	request :=
 		apirequest.UpdateModelServiceRequest{
+			Backend:  string(backend),
 			Image:    modelService.Spec.Image,
 			Replicas: modelService.Spec.Replicas,
 			Port:     modelService.Spec.Port,
 		}
 
+	if backend ==
+		platformv1alpha1.ModelServiceBackendKServe {
+		request.Port = 0
+	}
+
+	if modelService.Spec.Predictor != nil {
+		request.Predictor =
+			&apirequest.PredictorRequest{
+				ModelFormat: apirequest.ModelFormatRequest{
+					Name: modelService.Spec.Predictor.
+						ModelFormat.Name,
+					Version: modelService.Spec.Predictor.
+						ModelFormat.Version,
+				},
+				Runtime: modelService.Spec.Predictor.Runtime,
+				StorageURI: modelService.Spec.Predictor.
+					StorageURI,
+				ServiceAccountName: modelService.Spec.
+					Predictor.ServiceAccountName,
+			}
+	}
+
 	if modelService.Spec.Exposure != nil {
 		request.Exposure =
 			apirequest.ExposureRequest{
-				Enabled:    modelService.Spec.Exposure.Enabled,
-				Hostname:   modelService.Spec.Exposure.Hostname,
-				PathPrefix: modelService.Spec.Exposure.PathPrefix,
+				Enabled: modelService.Spec.
+					Exposure.Enabled,
+				Hostname: modelService.Spec.
+					Exposure.Hostname,
+				PathPrefix: modelService.Spec.
+					Exposure.PathPrefix,
 			}
 	}
 
 	if modelService.Spec.Storage != nil {
 		request.Storage =
 			apirequest.StorageRequest{
-				Enabled:   modelService.Spec.Storage.Enabled,
-				Size:      modelService.Spec.Storage.Size,
-				MountPath: modelService.Spec.Storage.MountPath,
+				Enabled: modelService.Spec.
+					Storage.Enabled,
+				Size: modelService.Spec.
+					Storage.Size,
+				MountPath: modelService.Spec.
+					Storage.MountPath,
 			}
 	}
 

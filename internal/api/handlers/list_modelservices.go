@@ -109,11 +109,21 @@ func (h *ListModelServicesHandler) ServeHTTP(
 func modelServiceToSummary(
 	modelService platformv1alpha1.ModelService,
 ) response.ModelServiceSummary {
+	backend := normalizedModelServiceBackend(
+		modelService.Spec.Backend,
+	)
+
 	summary := response.ModelServiceSummary{
 		Name:     modelService.Name,
-		Image:    modelService.Spec.Image,
+		Backend:  backend,
 		Replicas: modelService.Spec.Replicas,
 		State:    modelServiceState(modelService),
+	}
+
+	if backend == string(
+		platformv1alpha1.ModelServiceBackendDeployment,
+	) {
+		summary.Image = modelService.Spec.Image
 	}
 
 	if modelService.Spec.Exposure != nil &&

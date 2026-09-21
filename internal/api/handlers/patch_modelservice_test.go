@@ -226,6 +226,268 @@ func TestPatchModelServiceReplicasOnly(
 	}
 }
 
+func TestPatchKServeModelService(
+	t *testing.T,
+) {
+	original := &platformv1alpha1.ModelService{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "iris-api",
+			Namespace:  "ai-platform",
+			Generation: 3,
+		},
+		Spec: platformv1alpha1.ModelServiceSpec{
+			Backend: platformv1alpha1.
+				ModelServiceBackendKServe,
+			Replicas: 1,
+			Port:     8080,
+			Predictor: &platformv1alpha1.
+				ModelServicePredictor{
+				ModelFormat: platformv1alpha1.
+					ModelServiceModelFormat{
+					Name:    "sklearn",
+					Version: "1",
+				},
+				Runtime:            "kserve-sklearnserver",
+				StorageURI:         "s3://models/sklearn/iris/v1",
+				ServiceAccountName: "kserve-model-reader",
+			},
+		},
+	}
+
+	store := &fakeModelServiceUpdateStore{
+		item: original,
+	}
+
+	handler :=
+		NewPatchModelServiceHandler(
+			testLogger(),
+			store,
+			10,
+			testPatchDefaults(),
+		)
+
+	request := newPatchRequest(`
+{
+  "replicas": 2,
+  "predictor": {
+    "modelFormat": {
+      "name": "sklearn",
+      "version": "1"
+    },
+    "runtime": "kserve-sklearnserver",
+    "storageUri": "s3://models/sklearn/iris/v2",
+    "serviceAccountName": "kserve-model-reader"
+  }
+}
+`)
+
+	recorder := httptest.NewRecorder()
+
+	handler.ServeHTTP(
+		recorder,
+		request,
+	)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf(
+			"expected status %d, got %d: %s",
+			http.StatusOK,
+			recorder.Code,
+			recorder.Body.String(),
+		)
+	}
+
+	if store.updated == nil {
+		t.Fatal(
+			"expected KServe ModelService update",
+		)
+	}
+
+	if store.updated.Spec.Backend !=
+		platformv1alpha1.ModelServiceBackendKServe {
+		t.Fatalf(
+			"expected KServe backend, got %q",
+			store.updated.Spec.Backend,
+		)
+	}
+
+	if store.updated.Spec.Replicas != 2 {
+		t.Fatalf(
+			"expected replicas 2, got %d",
+			store.updated.Spec.Replicas,
+		)
+	}
+
+	if store.updated.Spec.Predictor == nil {
+		t.Fatal(
+			"expected KServe predictor",
+		)
+	}
+
+	if store.updated.Spec.Predictor.StorageURI !=
+		"s3://models/sklearn/iris/v2" {
+		t.Fatalf(
+			"unexpected storage URI %q",
+			store.updated.Spec.Predictor.StorageURI,
+		)
+	}
+
+	if store.updated.Spec.Port != 8080 {
+		t.Fatalf(
+			"expected stored default port to remain 8080, got %d",
+			store.updated.Spec.Port,
+		)
+	}
+}
+
+func TestPatchModelServiceRejectsBackendChange(
+	t *testing.T,
+) {
+	original := &platformv1alpha1.ModelService{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "iris-api",
+			Namespace: "ai-platform",
+		},
+		Spec: platformv1alpha1.ModelServiceSpec{
+			Backend: platformv1alpha1.
+				ModelServiceBackendKServe,
+			Replicas: 1,
+			Port:     8080,
+			Predictor: &platformv1alpha1.
+				ModelServicePredictor{
+				ModelFormat: platformv1alpha1.
+					ModelServiceModelFormat{
+					Name:    "sklearn",
+					Version: "1",
+				},
+				Runtime:            "kserve-sklearnserver",
+				StorageURI:         "s3://models/sklearn/iris/v1",
+				ServiceAccountName: "kserve-model-reader",
+			},
+		},
+	}
+
+	store := &fakeModelServiceUpdateStore{
+		item: original,
+	}
+
+	handler :=
+		NewPatchModelServiceHandler(
+			testLogger(),
+			store,
+			10,
+			testPatchDefaults(),
+		)
+
+	recorder := httptest.NewRecorder()
+
+	handler.ServeHTTP(
+		recorder,
+		newPatchRequest(
+			`{"backend":"Deployment"}`,
+		),
+	)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf(
+			"expected status %d, got %d: %s",
+			http.StatusBadRequest,
+			recorder.Code,
+			recorder.Body.String(),
+		)
+	}
+
+	if !strings.Contains(
+		recorder.Body.String(),
+		`"field":"backend"`,
+	) {
+		t.Fatalf(
+			"expected backend validation detail, got %s",
+			recorder.Body.String(),
+		)
+	}
+
+	if store.updated != nil {
+		t.Fatal(
+			"expected backend change not to be persisted",
+		)
+	}
+}
+
+func TestPatchKServeRejectsDeploymentFields(
+	t *testing.T,
+) {
+	original := &platformv1alpha1.ModelService{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "iris-api",
+			Namespace: "ai-platform",
+		},
+		Spec: platformv1alpha1.ModelServiceSpec{
+			Backend: platformv1alpha1.
+				ModelServiceBackendKServe,
+			Replicas: 1,
+			Port:     8080,
+			Predictor: &platformv1alpha1.
+				ModelServicePredictor{
+				ModelFormat: platformv1alpha1.
+					ModelServiceModelFormat{
+					Name:    "sklearn",
+					Version: "1",
+				},
+				Runtime:            "kserve-sklearnserver",
+				StorageURI:         "s3://models/sklearn/iris/v1",
+				ServiceAccountName: "kserve-model-reader",
+			},
+		},
+	}
+
+	store := &fakeModelServiceUpdateStore{
+		item: original,
+	}
+
+	handler :=
+		NewPatchModelServiceHandler(
+			testLogger(),
+			store,
+			10,
+			testPatchDefaults(),
+		)
+
+	recorder := httptest.NewRecorder()
+
+	handler.ServeHTTP(
+		recorder,
+		newPatchRequest(
+			`{"port":9090}`,
+		),
+	)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf(
+			"expected status %d, got %d: %s",
+			http.StatusBadRequest,
+			recorder.Code,
+			recorder.Body.String(),
+		)
+	}
+
+	if !strings.Contains(
+		recorder.Body.String(),
+		`"field":"port"`,
+	) {
+		t.Fatalf(
+			"expected port validation detail, got %s",
+			recorder.Body.String(),
+		)
+	}
+
+	if store.updated != nil {
+		t.Fatal(
+			"expected invalid patch not to be persisted",
+		)
+	}
+}
+
 func TestPatchModelServiceEmptyPatch(
 	t *testing.T,
 ) {
