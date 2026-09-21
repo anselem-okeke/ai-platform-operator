@@ -1,30 +1,48 @@
 package request
 
+type ModelFormatRequest struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+}
+
+type PredictorRequest struct {
+	ModelFormat        ModelFormatRequest `json:"modelFormat"`
+	Runtime            string             `json:"runtime"`
+	StorageURI         string             `json:"storageUri"`
+	ServiceAccountName string             `json:"serviceAccountName"`
+}
+
 type CreateModelServiceRequest struct {
-	Name     string `json:"name"`
-	Image    string `json:"image"`
-	Replicas int32  `json:"replicas"`
-	Port     int32  `json:"port"`
+	Name      string            `json:"name"`
+	Backend   string            `json:"backend,omitempty"`
+	Image     string            `json:"image,omitempty"`
+	Replicas  int32             `json:"replicas"`
+	Port      int32             `json:"port,omitempty"`
+	Predictor *PredictorRequest `json:"predictor,omitempty"`
 
 	Exposure ExposureRequest `json:"exposure"`
 	Storage  StorageRequest  `json:"storage"`
 }
 
 type UpdateModelServiceRequest struct {
-	Image    string `json:"image"`
-	Replicas int32  `json:"replicas"`
-	Port     int32  `json:"port"`
+	Backend   string            `json:"backend,omitempty"`
+	Image     string            `json:"image,omitempty"`
+	Replicas  int32             `json:"replicas"`
+	Port      int32             `json:"port,omitempty"`
+	Predictor *PredictorRequest `json:"predictor,omitempty"`
 
 	Exposure ExposureRequest `json:"exposure"`
 	Storage  StorageRequest  `json:"storage"`
 }
 
 type PatchModelServiceRequest struct {
-	Image    *string               `json:"image,omitempty"`
-	Replicas *int32                `json:"replicas,omitempty"`
-	Port     *int32                `json:"port,omitempty"`
-	Exposure *PatchExposureRequest `json:"exposure,omitempty"`
-	Storage  *PatchStorageRequest  `json:"storage,omitempty"`
+	Backend   *string               `json:"backend,omitempty"`
+	Image     *string               `json:"image,omitempty"`
+	Replicas  *int32                `json:"replicas,omitempty"`
+	Port      *int32                `json:"port,omitempty"`
+	Predictor *PredictorRequest     `json:"predictor,omitempty"`
+	Exposure  *PatchExposureRequest `json:"exposure,omitempty"`
+	Storage   *PatchStorageRequest  `json:"storage,omitempty"`
 }
 
 type PatchExposureRequest struct {

@@ -137,30 +137,6 @@ func (h *UpdateModelServiceHandler) ServeHTTP(
 		return
 	}
 
-	details :=
-		validation.ValidateUpdateModelService(
-			name,
-			request,
-			h.maxReplicas,
-		)
-
-	if len(details) > 0 {
-		response.WriteJSON(
-			w,
-			http.StatusBadRequest,
-			response.APIError{
-				Error: response.ErrorBody{
-					Code:      codeValidationFailed,
-					Message:   messageRequestValidationFailed,
-					RequestID: middleware.RequestIDFromContext(r.Context()),
-					Details:   details,
-				},
-			},
-		)
-
-		return
-	}
-
 	modelService, err :=
 		h.store.Get(
 			r.Context(),
@@ -211,6 +187,71 @@ func (h *UpdateModelServiceHandler) ServeHTTP(
 					Code:      codeKubernetesUnavailable,
 					Message:   messageUnableToLoadModelService,
 					RequestID: middleware.RequestIDFromContext(r.Context()),
+				},
+			},
+		)
+
+		return
+	}
+
+	existingBackend := modelService.Spec.Backend
+
+	if existingBackend == "" {
+		existingBackend = platformv1alpha1.
+			ModelServiceBackendDeployment
+	}
+
+	if request.Backend == "" {
+		request.Backend = string(existingBackend)
+	}
+
+	if request.Backend != string(existingBackend) {
+		response.WriteJSON(
+			w,
+			http.StatusBadRequest,
+			response.APIError{
+				Error: response.ErrorBody{
+					Code:    codeValidationFailed,
+					Message: messageRequestValidationFailed,
+					RequestID: middleware.
+						RequestIDFromContext(
+							r.Context(),
+						),
+					Details: []response.ValidationDetail{
+						{
+							Field: "backend",
+							Message: "is immutable and " +
+								"must remain " +
+								string(existingBackend),
+						},
+					},
+				},
+			},
+		)
+
+		return
+	}
+
+	details :=
+		validation.ValidateUpdateModelService(
+			name,
+			request,
+			h.maxReplicas,
+		)
+
+	if len(details) > 0 {
+		response.WriteJSON(
+			w,
+			http.StatusBadRequest,
+			response.APIError{
+				Error: response.ErrorBody{
+					Code:    codeValidationFailed,
+					Message: messageRequestValidationFailed,
+					RequestID: middleware.
+						RequestIDFromContext(
+							r.Context(),
+						),
+					Details: details,
 				},
 			},
 		)
@@ -290,6 +331,16 @@ func applyUpdateRequest(
 	request apirequest.UpdateModelServiceRequest,
 	defaults ModelServiceDefaults,
 ) {
+	modelService.Spec.Backend =
+		platformv1alpha1.ModelServiceBackend(
+			request.Backend,
+		)
+
+	modelService.Spec.Predictor =
+		requestPredictorToModelService(
+			request.Predictor,
+		)
+
 	modelService.Spec.Image =
 		request.Image
 

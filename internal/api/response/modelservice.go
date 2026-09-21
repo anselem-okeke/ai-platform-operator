@@ -2,7 +2,8 @@ package response
 
 type ModelServiceSummary struct {
 	Name     string `json:"name"`
-	Image    string `json:"image"`
+	Backend  string `json:"backend"`
+	Image    string `json:"image,omitempty"`
 	Replicas int32  `json:"replicas"`
 	State    string `json:"state"`
 	Hostname string `json:"hostname,omitempty"`
@@ -25,15 +26,29 @@ type ModelServiceStorage struct {
 	MountPath string `json:"mountPath,omitempty"`
 }
 
+type ModelServiceModelFormat struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+}
+
+type ModelServicePredictor struct {
+	ModelFormat        ModelServiceModelFormat `json:"modelFormat"`
+	Runtime            string                  `json:"runtime"`
+	StorageURI         string                  `json:"storageUri"`
+	ServiceAccountName string                  `json:"serviceAccountName"`
+}
+
 type ModelServiceResponse struct {
 	APIVersion string `json:"apiVersion"`
 	Kind       string `json:"kind"`
 
-	Name string `json:"name"`
+	Name    string `json:"name"`
+	Backend string `json:"backend"`
 
-	Image    string `json:"image"`
-	Replicas int32  `json:"replicas"`
-	Port     int32  `json:"port"`
+	Image     string                 `json:"image,omitempty"`
+	Replicas  int32                  `json:"replicas"`
+	Port      int32                  `json:"port,omitempty"`
+	Predictor *ModelServicePredictor `json:"predictor,omitempty"`
 
 	Exposure ModelServiceExposure `json:"exposure"`
 	Storage  ModelServiceStorage  `json:"storage"`

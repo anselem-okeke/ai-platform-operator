@@ -277,6 +277,15 @@ func createRequestToModelService(
 	request apirequest.CreateModelServiceRequest,
 	defaults ModelServiceDefaults,
 ) *platformv1alpha1.ModelService {
+	backend := platformv1alpha1.ModelServiceBackend(
+		request.Backend,
+	)
+
+	if backend == "" {
+		backend = platformv1alpha1.
+			ModelServiceBackendDeployment
+	}
+
 	modelService := &platformv1alpha1.ModelService{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "platform.anselem.dev/v1alpha1",
@@ -286,9 +295,13 @@ func createRequestToModelService(
 			Name: request.Name,
 		},
 		Spec: platformv1alpha1.ModelServiceSpec{
+			Backend:  backend,
 			Image:    request.Image,
 			Replicas: request.Replicas,
 			Port:     request.Port,
+			Predictor: requestPredictorToModelService(
+				request.Predictor,
+			),
 		},
 	}
 
@@ -310,5 +323,33 @@ func createRequestToModelService(
 			}
 	}
 
+	if request.Storage.Enabled {
+		modelService.Spec.Storage =
+			&platformv1alpha1.ModelServiceStorage{
+				Enabled:   true,
+				Size:      request.Storage.Size,
+				MountPath: request.Storage.MountPath,
+			}
+	}
+
 	return modelService
+}
+
+func requestPredictorToModelService(
+	predictor *apirequest.PredictorRequest,
+) *platformv1alpha1.ModelServicePredictor {
+	if predictor == nil {
+		return nil
+	}
+
+	return &platformv1alpha1.ModelServicePredictor{
+		ModelFormat: platformv1alpha1.
+			ModelServiceModelFormat{
+			Name:    predictor.ModelFormat.Name,
+			Version: predictor.ModelFormat.Version,
+		},
+		Runtime:            predictor.Runtime,
+		StorageURI:         predictor.StorageURI,
+		ServiceAccountName: predictor.ServiceAccountName,
+	}
 }

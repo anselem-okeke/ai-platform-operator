@@ -80,6 +80,7 @@ func TestListModelServices(t *testing.T) {
 
 	expectedValues := []string{
 		`"name":"fraud-model"`,
+		`"backend":"Deployment"`,
 		`"image":"example/fraud:v1"`,
 		`"replicas":2`,
 		`"count":1`,
