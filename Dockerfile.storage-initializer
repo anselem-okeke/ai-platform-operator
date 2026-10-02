@@ -80,8 +80,8 @@ minimums = {
     "dulwich": "1.2.5",
     "protobuf": "6.33.5",
     "pyasn1": "0.6.4",
-    "PyJWT": "2.13.0",
-    "urllib3": "2.7.0",
+    "PyJWT": "2.14.0",
+    "urllib3": "2.8.0",
 }
 
 print("===== RESOLVED STORAGE PACKAGES =====")
