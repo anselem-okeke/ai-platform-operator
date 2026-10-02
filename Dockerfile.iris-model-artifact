@@ -1,0 +1,67 @@
+ARG RUNTIME_IMAGE=ghcr.io/anselem-okeke/ai-platform-sklearnserver@sha256:42aa6c49a5348897c923925ab0fdbba16aed8a288346f3c10d3c5af223ec355f
+
+
+# ============================================================
+# Train and verify the model in the production runtime
+# ============================================================
+
+FROM ${RUNTIME_IMAGE} AS trainer
+
+ARG MODEL_VERSION=v2
+ARG SOURCE_REVISION=local
+
+WORKDIR /home/kserve/iris-artifact-build
+
+COPY --chown=1000:1000 \
+    models/iris/train.py \
+    models/iris/verify.py \
+    ./
+
+RUN mkdir -p /tmp/iris-model \
+    && python train.py \
+       --output-dir /tmp/iris-model \
+       --model-version "${MODEL_VERSION}" \
+       --source-revision "${SOURCE_REVISION}" \
+    && python verify.py \
+       --artifact-dir /tmp/iris-model \
+       --expected-model-version "${MODEL_VERSION}"
+
+
+# ============================================================
+# Immutable model-bundle image
+# ============================================================
+
+FROM ${RUNTIME_IMAGE} AS bundle
+
+ARG MODEL_VERSION=v2
+ARG SOURCE_REVISION=local
+
+LABEL org.opencontainers.image.title="AI Platform Iris model artifact"
+LABEL org.opencontainers.image.description="Verified sklearn Iris model bundle for controlled in-cluster onboarding"
+LABEL org.opencontainers.image.source="https://github.com/anselem-okeke/ai-platform-operator"
+LABEL org.opencontainers.image.revision="${SOURCE_REVISION}"
+LABEL platform.anselem.dev.model.name="iris"
+LABEL platform.anselem.dev.model.version="${MODEL_VERSION}"
+LABEL platform.anselem.dev.model.format="sklearn"
+
+ENV MODEL_VERSION="${MODEL_VERSION}"
+
+USER root
+
+COPY --from=trainer \
+    --chown=1000:1000 \
+    /tmp/iris-model \
+    /model
+
+COPY --chown=1000:1000 \
+    models/iris/verify.py \
+    /opt/iris/verify.py
+
+RUN chmod -R a-w /model /opt/iris \
+    && chmod a+rX /model /opt/iris
+
+USER 1000
+
+ENTRYPOINT []
+
+CMD ["/bin/sh", "-ec", "python /opt/iris/verify.py --artifact-dir /model --expected-model-version \"${MODEL_VERSION}\" && test -d /output && cp -R /model/. /output/ && echo 'PASS: Iris model bundle exported'"]

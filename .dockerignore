@@ -15,3 +15,9 @@
 !scripts/runtime/
 !scripts/runtime/**
 !Dockerfile.sklearn-runtime
+
+# Iris model artifact build inputs
+!models/
+!models/iris/
+!models/iris/*.py
+!Dockerfile.iris-model-artifact
