@@ -46,6 +46,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     cd kserve \
     && uv lock \
        --upgrade-package starlette \
+       --upgrade-package anyio \
        --upgrade-package urllib3 \
        --upgrade-package aiohttp \
        --upgrade-package cryptography \
@@ -74,6 +75,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     cd sklearnserver \
     && uv lock \
        --upgrade-package starlette \
+       --upgrade-package anyio \
        --upgrade-package urllib3 \
        --upgrade-package aiohttp \
        --upgrade-package cryptography \
@@ -96,6 +98,7 @@ from importlib import metadata
 packages = [
     "kserve",
     "scikit-learn",
+    "anyio",
     "PyJWT",
     "aiohttp",
     "cryptography",

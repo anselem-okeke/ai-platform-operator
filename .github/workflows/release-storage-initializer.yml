@@ -77,9 +77,9 @@ jobs:
           grep -F '"aiohttp<4.0.0,>=3.14.3"' "$STORAGE_PROJECT"
           grep -F '"dulwich>=1.2.5"' "$STORAGE_PROJECT"
           grep -F '"cryptography>=50.0.0"' "$STORAGE_PROJECT"
-          grep -F '"pyjwt>=2.13.0"' "$STORAGE_PROJECT"
+          grep -F '"pyjwt>=2.14.0"' "$STORAGE_PROJECT"
           grep -F '"pyasn1>=0.6.4"' "$STORAGE_PROJECT"
-          grep -F '"urllib3>=2.7.0"' "$STORAGE_PROJECT"
+          grep -F '"urllib3>=2.8.0"' "$STORAGE_PROJECT"
           grep -F '"protobuf>=6.33.5"' "$STORAGE_PROJECT"
 
           echo "Prepared KServe storage source verified."

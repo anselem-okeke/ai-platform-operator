@@ -55,13 +55,14 @@ replace(
 replace(
     kserve,
     '"starlette==0.49.1"',
-    '"starlette>=1.3.1"',
+    '"starlette>=1.3.1",\n'
+    '    "anyio>=4.14.2"',
 )
 
 replace(
     kserve,
     '"urllib3>=2.6.0"',
-    '"urllib3>=2.7.0"',
+    '"urllib3>=2.8.0"',
 )
 
 replace(
@@ -85,7 +86,7 @@ replace(
 replace(
     kserve,
     '"pyjwt>=2.12.0"',
-    '"pyjwt>=2.13.0"',
+    '"pyjwt>=2.14.0"',
 )
 
 replace(
@@ -120,7 +121,7 @@ replace(
 replace(
     storage,
     '"pyjwt>=2.12.0"',
-    '"pyjwt>=2.13.0"',
+    '"pyjwt>=2.14.0"',
 )
 
 replace(
@@ -144,7 +145,7 @@ replace(
     storage,
     '    "azure-core>=1.38.0"\n]',
     '    "azure-core>=1.38.0",\n'
-    '    "urllib3>=2.7.0",\n'
+    '    "urllib3>=2.8.0",\n'
     '    "protobuf>=6.33.5"\n'
     ']',
 )
