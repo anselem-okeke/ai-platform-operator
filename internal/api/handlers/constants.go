@@ -17,3 +17,5 @@ const (
 	messageRequestValidationFailed     = "request validation failed"
 	messageUnableToLoadModelService    = "unable to load ModelService"
 )
+
+const messageModelServiceModifiedConcurrently = "ModelService was modified concurrently; retry the request"

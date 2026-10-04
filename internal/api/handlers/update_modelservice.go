@@ -194,6 +194,10 @@ func (h *UpdateModelServiceHandler) ServeHTTP(
 		return
 	}
 
+	if rejectGitOpsMutation(w, r, modelService) {
+		return
+	}
+
 	existingBackend := modelService.Spec.Backend
 
 	if existingBackend == "" {
@@ -276,7 +280,7 @@ func (h *UpdateModelServiceHandler) ServeHTTP(
 				response.APIError{
 					Error: response.ErrorBody{
 						Code:      "MODEL_SERVICE_UPDATE_CONFLICT",
-						Message:   "ModelService was modified concurrently; retry the request",
+						Message:   messageModelServiceModifiedConcurrently,
 						RequestID: middleware.RequestIDFromContext(r.Context()),
 					},
 				},

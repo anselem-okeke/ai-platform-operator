@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -113,9 +114,22 @@ func (s *ModelServiceStore) Delete(
 ) error {
 	modelService.Namespace = s.namespace
 
+	// Bind deletion to the exact object and version inspected by the handler.
+	// A concurrent ownership change or recreation must fail with a conflict.
+	preconditions := metav1.Preconditions{}
+	if modelService.UID != "" {
+		uid := modelService.UID
+		preconditions.UID = &uid
+	}
+	if modelService.ResourceVersion != "" {
+		version := modelService.ResourceVersion
+		preconditions.ResourceVersion = &version
+	}
+
 	if err := s.client.Delete(
 		ctx,
 		modelService,
+		&client.DeleteOptions{Preconditions: &preconditions},
 	); err != nil {
 		return fmt.Errorf(
 			"delete ModelService %q in namespace %q: %w",
