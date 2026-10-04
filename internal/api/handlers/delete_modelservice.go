@@ -118,6 +118,10 @@ func (h *DeleteModelServiceHandler) ServeHTTP(
 		return
 	}
 
+	if rejectGitOpsMutation(w, r, modelService) {
+		return
+	}
+
 	if err := h.store.Delete(
 		r.Context(),
 		modelService,
@@ -125,6 +129,17 @@ func (h *DeleteModelServiceHandler) ServeHTTP(
 		if apierrors.IsNotFound(err) {
 			w.WriteHeader(http.StatusNoContent)
 
+			return
+		}
+
+		if apierrors.IsConflict(err) {
+			response.WriteJSON(w, http.StatusConflict, response.APIError{
+				Error: response.ErrorBody{
+					Code:      "MODEL_SERVICE_DELETE_CONFLICT",
+					Message:   messageModelServiceModifiedConcurrently,
+					RequestID: middleware.RequestIDFromContext(r.Context()),
+				},
+			})
 			return
 		}
 
