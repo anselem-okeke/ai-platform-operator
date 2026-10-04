@@ -1,0 +1,67 @@
+ARG RUNTIME_IMAGE=ghcr.io/anselem-okeke/ai-platform-sklearnserver@sha256:2273cfb3aea6ee8d38175ff972ca9b6c036a57f4e517ff7b83b7bc02bbba8843
+
+
+# ============================================================
+# Train and verify the model in the production runtime
+# ============================================================
+
+FROM ${RUNTIME_IMAGE} AS trainer
+
+ARG MODEL_VERSION=v1
+ARG SOURCE_REVISION=local
+
+WORKDIR /home/kserve/breast-cancer-artifact-build
+
+COPY --chown=1000:1000 \
+    models/breast-cancer/train.py \
+    models/breast-cancer/verify.py \
+    ./
+
+RUN mkdir -p /tmp/breast-cancer-model \
+    && python train.py \
+       --output-dir /tmp/breast-cancer-model \
+       --model-version "${MODEL_VERSION}" \
+       --source-revision "${SOURCE_REVISION}" \
+    && python verify.py \
+       --artifact-dir /tmp/breast-cancer-model \
+       --expected-model-version "${MODEL_VERSION}"
+
+
+# ============================================================
+# Immutable model-bundle image
+# ============================================================
+
+FROM ${RUNTIME_IMAGE} AS bundle
+
+ARG MODEL_VERSION=v1
+ARG SOURCE_REVISION=local
+
+LABEL org.opencontainers.image.title="AI Platform Breast cancer model artifact"
+LABEL org.opencontainers.image.description="Verified sklearn Breast cancer model bundle for controlled in-cluster onboarding"
+LABEL org.opencontainers.image.source="https://github.com/anselem-okeke/ai-platform-operator"
+LABEL org.opencontainers.image.revision="${SOURCE_REVISION}"
+LABEL platform.anselem.dev.model.name="breast-cancer"
+LABEL platform.anselem.dev.model.version="${MODEL_VERSION}"
+LABEL platform.anselem.dev.model.format="sklearn"
+
+ENV MODEL_VERSION="${MODEL_VERSION}"
+
+USER root
+
+COPY --from=trainer \
+    --chown=1000:1000 \
+    /tmp/breast-cancer-model \
+    /model
+
+COPY --chown=1000:1000 \
+    models/breast-cancer/verify.py \
+    /opt/breast-cancer/verify.py
+
+RUN chmod -R a-w /model /opt/breast-cancer \
+    && chmod a+rX /model /opt/breast-cancer
+
+USER 1000
+
+ENTRYPOINT []
+
+CMD ["/bin/sh", "-ec", "python /opt/breast-cancer/verify.py --artifact-dir /model --expected-model-version \"${MODEL_VERSION}\" && test -d /output && cp -R /model/. /output/ && echo 'PASS: Breast cancer model bundle exported'"]
