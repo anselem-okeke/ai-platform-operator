@@ -21,3 +21,8 @@
 !models/iris/
 !models/iris/*.py
 !Dockerfile.iris-model-artifact
+
+# Breast cancer demo model artifact build inputs
+!models/breast-cancer/
+!models/breast-cancer/*.py
+!Dockerfile.breast-cancer-model-artifact
