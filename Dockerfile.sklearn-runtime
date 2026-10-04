@@ -137,6 +137,18 @@ FROM ${BASE_IMAGE} AS prod
 
 ARG VENV_PATH
 
+# Upgrade the inherited Debian PCRE2 package in the final image.
+# Fail the build if the security-fixed version is unavailable.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends --only-upgrade \
+       libpcre2-8-0 \
+    && PCRE2_VERSION="$(dpkg-query -W -f='${Version}' libpcre2-8-0)" \
+    && dpkg --compare-versions \
+       "${PCRE2_VERSION}" ge "10.42-1+deb12u2" \
+    && printf 'PASS: libpcre2-8-0=%s satisfies security floor\n' \
+       "${PCRE2_VERSION}" \
+    && rm -rf /var/lib/apt/lists/*
+
 ENV VIRTUAL_ENV=${VENV_PATH}
 ENV PATH="${VIRTUAL_ENV}/bin:${PATH}"
 ENV PYTHONPATH=/sklearnserver
